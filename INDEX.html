@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Гоночная Игра - Расширенная (ПЛАН B)</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FFD700">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Гонка">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        canvas {
+            border: 4px solid #fff;
+            background: #fff;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+            cursor: none;
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <script>
+        // ========== SOUND SYSTEM ==========
+        class SoundManager {
+            constructor() {
+                this.audioContext = null;
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.log('Web Audio API not available');
+                }
+            }
+
+            playDriftSound() {
+                if (!this.audioContext) return;
+                const ctx = this.audioContext;
+                const now = ctx.currentTime;
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+
+            playFinishSound() {
+                if (!this.audioContext) return;
+                const ctx = this.audioContext;
+                const now = ctx.currentTime;
+
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.frequency.setValueAtTime(500, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        const CANVAS_WIDTH = 1280;
+        const CANVAS_HEIGHT = 720;
+        const CAR_WIDTH = 40;
+        const CAR_HEIGHT = 60;
+        const TRACK_LENGTH = 6000;
+        const soundManager = new SoundManager();
+
+        // ========== TRACK DEFINITIONS ==========
+        const TRACKS = {
+            'desert1': {
+                name: 'ПУСТЫНЯ 1',
+                bg: '#8B6914',
+                road: '#333333',
+                lines: '#FFFF00',
+                difficulty: 1,
+                path: (y) => 320 + Math.sin(y / 400) * 40
+            },
+            'desert2': {
+                name: 'ПУСТЫНЯ 2 (ВОЛНЫ)',
+                bg: '#8B6914',
+                road: '#333333',
+                lines: '#FFFF00',
+                difficulty: 2,
+                path: (y) => 320 + Math.sin(y / 300) * 80 + Math.cos(y / 500) * 50
+            },
+            'city1': {
+                name: 'ГОРОД 1',
+                bg: '#555555',
+                road: '#1a1a1a',
+                lines: '#FFFFFF',
+                difficulty: 2,
+                path: (y) => 300 + Math.sin(y / 250) * 100
+            },
+            'city2': {
+                name: 'ГОРОД 2 (S-ПОВОРОТЫ)',
+                bg: '#555555',
+                road: '#1a1a1a',
+                lines: '#FFFFFF',
+                difficulty: 3,
+                path: (y) => {
+                    if (y < 1500) return 280 + Math.sin(y / 200) * 80;
+                    else return 360 + Math.sin(y / 200) * 80;
+                }
+            },
+            'mountain': {
+                name: 'ГОРЫ (СПИРАЛЬ)',
+                bg: '#4A5859',
+                road: '#2a3435',
+                lines: '#FFD700',
+                difficulty: 4,
+                path: (y) => 320 + Math.sin(y / 150) * 120
+            },
+            'night': {
+                name: 'НОЧЬ (УЗКАЯ)',
+                bg: '#1a1a2e',
+                road: '#0f0f1e',
+                lines: '#00FF00',
+                difficulty: 3,
+                path: (y) => 340 + Math.sin(y / 350) * 60
+            }
+        };
+
+        class InputHandler {
+            constructor() {
+                this.keys = {};
+                this.setupListeners();
+            }
+
+            setupListeners() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.key] = true;
+                });
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.key] = false;
+                });
+                window.addEventListener('blur', () => {
+                    this.keys = {};
+                });
+                window.addEventListener('focus', () => {
+                    this.keys = {};
+                });
+            }
+
+            isPressed(key) {
+                return this.keys[key] || false;
+            }
+
+            getMovement() {
+                let movement = 0;
+                if (this.isPressed('ArrowLeft')) movement -= 1;
+                if (this.isPressed('ArrowRight')) movement += 1;
+                return movement;
+            }
+
+            isDriftPressed() {
+                return this.isPressed('Shift') || this.isPressed('d') || this.isPressed('D');
+            }
+
+            isPausePressed() {
+                return this.keys['p'] || this.keys['P'];
+            }
+
+            isSelectPressed() {
+                return this.keys['Enter'] || this.keys[' '];
+            }
+
+            isMetricsPressed() {
+                return this.keys['m'] || this.keys['M'];
+            }
+        }
+
+        class PlayerCar {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = CAR_WIDTH;
+                this.height = CAR_HEIGHT;
+                this.speed = 8;
+                this.acceleration = 0.3;
+                this.velocity = 0;
+                this.angle = 0;
+                this.isDrifting = false;
+                this.driftAngle = 0;
+                this.driftTimer = 0;
+                this.boostActive = false;
+                this.boostTimer = 0;
+                this.boostSpeed = 0;
+            }
+
+            update(inputHandler, track, gameManager) {
+                let maxSpeed = this.speed;
+
+                // Бонус за дрифт
+                if (this.boostActive) {
+                    this.boostTimer++;
+                    maxSpeed += this.boostSpeed;
+                    if (this.boostTimer > 60) {
+                        this.boostActive = false;
+                        this.boostTimer = 0;
+                        this.boostSpeed = 0;
+                    }
+                }
+
+                this.velocity = Math.min(this.velocity + this.acceleration, maxSpeed);
+                this.y += this.velocity;
+
+                const movement = inputHandler.getMovement();
+                const trackX = track.path(this.y);
+
+                if (inputHandler.isDriftPressed() && !this.isDrifting) {
+                    this.isDrifting = true;
+                    this.driftTimer = 0;
+                }
+
+                if (this.isDrifting) {
+                    this.driftTimer++;
+                    this.driftAngle = Math.min(this.driftAngle + movement * 3, 45);
+                    if (!inputHandler.isDriftPressed() || this.driftTimer > 120) {
+                        this.isDrifting = false;
+                        // Активируем бонус после дрифта
+                        if (this.driftTimer > 20) {
+                            this.boostActive = true;
+                            this.boostTimer = 0;
+                            this.boostSpeed = 2;
+                            soundManager.playDriftSound();
+                            if (gameManager) gameManager.recordDrift();
+                        }
+                        this.driftAngle = 0;
+                    }
+                    this.x += movement * 4;
+                } else {
+                    this.x += movement * 6;
+                    this.angle = movement * 15;
+                }
+
+                // Границы дороги (мягче)
+                const roadWidth = 160;
+                const minX = trackX - roadWidth;
+                const maxX = trackX + roadWidth;
+
+                if (this.x < minX) this.x = minX;
+                if (this.x + this.width > maxX) this.x = maxX - this.width;
+            }
+
+            finish() {
+                return this.y >= TRACK_LENGTH;
+            }
+
+            render(ctx, cameraOffset, track, skinColor) {
+                const screenY = this.y - cameraOffset;
+                const trackX = track.path(this.y);
+                const carColor = this.boostActive ? '#FFFF00' : (skinColor || '#FF6B6B');
+
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, screenY + this.height / 2);
+                ctx.rotate((this.angle + this.driftAngle) * Math.PI / 180);
+
+                // Свечение при бонусе
+                if (this.boostActive) {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.width + 15, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Корпус машины
+                ctx.fillStyle = carColor;
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+
+                // Окна
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(-12, -25, 24, 12);
+                ctx.fillRect(-12, 10, 24, 12);
+
+                // Бамперы
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(-18, -28, 36, 3);
+                ctx.fillRect(-18, 25, 36, 3);
+
+                ctx.restore();
+
+                // След от дрифта
+                if (this.isDrifting) {
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, screenY);
+                    ctx.lineTo(this.x - 15, screenY + 10);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        class BotCar {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = CAR_WIDTH;
+                this.height = CAR_HEIGHT;
+                this.speed = 5.5;
+                this.acceleration = 0.18;
+                this.velocity = 0;
+                this.aiTimer = 0;
+                this.aiDirection = 0;
+                this.aiChangeInterval = Math.random() * 60 + 40;
+                this.finished = false;
+            }
+
+            update(track) {
+                this.velocity = Math.min(this.velocity + this.acceleration, this.speed);
+                this.y += this.velocity;
+
+                this.aiTimer++;
+                if (this.aiTimer > this.aiChangeInterval) {
+                    this.aiDirection = Math.random() > 0.5 ? 1 : -1;
+                    this.aiTimer = 0;
+                    this.aiChangeInterval = Math.random() * 60 + 40;
+                }
+
+                const trackX = track.path(this.y);
+                const roadWidth = 160;
+                const minX = trackX - roadWidth;
+                const maxX = trackX + roadWidth;
+
+                this.x += this.aiDirection * 3;
+
+                if (this.x < minX) this.x = minX;
+                if (this.x + this.width > maxX) this.x = maxX - this.width;
+            }
+
+            finish() {
+                return this.y >= TRACK_LENGTH;
+            }
+
+            render(ctx, cameraOffset) {
+                const screenY = this.y - cameraOffset;
+
+                // Корпус
+                ctx.fillStyle = '#4ECDC4';
+                ctx.fillRect(this.x, screenY, this.width, this.height);
+
+                // Окна
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(this.x + 5, screenY + 8, 30, 12);
+            }
+        }
+
+        class TrackManager {
+            constructor(trackKey) {
+                this.track = TRACKS[trackKey] || TRACKS['desert1'];
+                this.roadWidth = 320;
+            }
+
+            render(ctx, cameraOffset) {
+                const track = this.track;
+
+                // Фон
+                ctx.fillStyle = track.bg;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                // Горы/здания на фоне
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                for (let i = 0; i < 10; i++) {
+                    ctx.fillRect(30 + i * 120, 50, 100, 100);
+                }
+                ctx.fillRect(CANVAS_WIDTH - 130, 50, 100, 100);
+                for (let i = 0; i < 10; i++) {
+                    ctx.fillRect(CANVAS_WIDTH - 30 - i * 120, 50, 100, 100);
+                }
+
+                // Дорога (кривая)
+                ctx.fillStyle = track.road;
+                for (let screenY = -50; screenY < CANVAS_HEIGHT + 50; screenY += 10) {
+                    const trackY = screenY + cameraOffset;
+                    const pathX = track.path(trackY);
+                    ctx.fillRect(pathX - this.roadWidth / 2, screenY, this.roadWidth, 11);
+                }
+
+                // Разметка
+                ctx.strokeStyle = track.lines;
+                ctx.lineWidth = 2;
+                for (let screenY = -50; screenY < CANVAS_HEIGHT; screenY += 30) {
+                    const trackY = screenY + cameraOffset;
+                    const pathX = track.path(trackY);
+                    ctx.beginPath();
+                    ctx.moveTo(pathX - 2, screenY);
+                    ctx.lineTo(pathX + 2, screenY + 20);
+                    ctx.stroke();
+                }
+
+                // Облака
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                for (let i = 0; i < 5; i++) {
+                    const cloudY = 40 + (cameraOffset / 10 + i * 80) % 200;
+                    ctx.fillRect(50 + i * 250, cloudY, 100, 30);
+                }
+            }
+        }
+
+        class UIManager {
+            static drawTrackSelect(ctx, tracks, selectedIndex) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 60px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ВЫБОР ТРАССЫ', CANVAS_WIDTH / 2, 100);
+
+                const trackKeys = Object.keys(TRACKS);
+                const itemsPerRow = 2;
+                const startIndex = Math.floor(selectedIndex / itemsPerRow) * itemsPerRow;
+
+                for (let i = 0; i < Math.min(4, trackKeys.length - startIndex); i++) {
+                    const trackKey = trackKeys[startIndex + i];
+                    const track = TRACKS[trackKey];
+                    const col = i % itemsPerRow;
+                    const row = Math.floor(i / itemsPerRow);
+
+                    const x = 200 + col * 400;
+                    const y = 200 + row * 200;
+                    const w = 350;
+                    const h = 150;
+
+                    const isSelected = selectedIndex === startIndex + i;
+                    ctx.fillStyle = isSelected ? '#FFD700' : '#666666';
+                    ctx.fillRect(x, y, w, h);
+
+                    ctx.strokeStyle = isSelected ? '#FFFF00' : '#FFFFFF';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x, y, w, h);
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 22px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(track.name, x + w / 2, y + 50);
+                    ctx.font = '16px Arial';
+                    ctx.fillText(`Сложность: ${'★'.repeat(track.difficulty)}`, x + w / 2, y + 90);
+                }
+
+                ctx.fillStyle = '#CCCCCC';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('← Стрелки → для выбора | Space/Enter для начала', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
+            }
+
+            static drawMenu(ctx) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 72px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ГОНОЧНАЯ ИГРА', CANVAS_WIDTH / 2, 80);
+
+                ctx.font = '18px Arial';
+                ctx.fillStyle = '#CCCCCC';
+                ctx.fillText('Расширенная версия (ПЛАН B)', CANVAS_WIDTH / 2, 130);
+
+                // Большая кнопка НАЧАТЬ
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 180, 300, 80);
+                ctx.strokeStyle = '#FFFF00';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 180, 300, 80);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 48px Arial';
+                ctx.fillText('НАЧАТЬ', CANVAS_WIDTH / 2, 238);
+
+                ctx.font = '18px Arial';
+                ctx.fillStyle = '#90EE90';
+                ctx.fillText('Управление:', CANVAS_WIDTH / 2, 330);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '15px Arial';
+                ctx.fillText('← → Стрелки - Влево/Вправо', CANVAS_WIDTH / 2, 365);
+                ctx.fillText('Shift или D - Дрифт', CANVAS_WIDTH / 2, 390);
+                ctx.fillText('P - Пауза', CANVAS_WIDTH / 2, 415);
+
+                ctx.fillStyle = '#FFD700';
+                ctx.font = '20px Arial';
+                ctx.fillText('➜ Нажми ENTER чтобы начать! ➜', CANVAS_WIDTH / 2, 470);
+
+                ctx.fillStyle = '#90EE90';
+                ctx.font = '14px Arial';
+                ctx.fillText('Цель: Обогнать ботов и финишировать первым!', CANVAS_WIDTH / 2, 530);
+            }
+
+            static drawHUD(ctx, playerY, botY, trackName, level, levelProgress) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(0, 0, 400, 140);
+
+                // Уровень
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'left';
+                ctx.fillText('Уровень ' + level, 20, 30);
+
+                // Полоса прогресса
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(20, 38, 200, 12);
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(20, 38, (200 * levelProgress) / 100, 12);
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(20, 38, 200, 12);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '10px Arial';
+                ctx.fillText(Math.round(levelProgress) + '%', 230, 47);
+
+                ctx.fillStyle = '#FF6B6B';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText('Вы: ' + Math.floor(playerY), 20, 70);
+
+                ctx.fillStyle = '#4ECDC4';
+                ctx.fillText('Боты: ' + Math.floor(botY), 20, 90);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '11px Arial';
+                ctx.fillText('Shift/D = Дрифт, P = Пауза', 20, 110);
+            }
+
+            static drawResults(ctx, position, playerRating, levelUpMessage) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 60px Arial';
+                ctx.textAlign = 'center';
+
+                if (position === 1) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillText('ВЫ ВЫИГРАЛИ! 🥇', CANVAS_WIDTH / 2, 120);
+                } else if (position === 2) {
+                    ctx.fillStyle = '#C0C0C0';
+                    ctx.fillText('ВТОРОЕ МЕСТО 🥈', CANVAS_WIDTH / 2, 120);
+                } else {
+                    ctx.fillStyle = '#CD7F32';
+                    ctx.fillText('ТРЕТЬЕ МЕСТО 🥉', CANVAS_WIDTH / 2, 120);
+                }
+
+                // LEVEL UP MESSAGE
+                if (levelUpMessage) {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.font = 'bold 48px Arial';
+                    ctx.fillText(levelUpMessage, CANVAS_WIDTH / 2, 190);
+                }
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '32px Arial';
+                ctx.fillText(`Позиция: ${position}`, CANVAS_WIDTH / 2, 250);
+
+                const ratingIncrease = position === 1 ? 50 : position === 2 ? 25 : 10;
+                ctx.font = 'bold 40px Arial';
+                ctx.fillStyle = '#90EE90';
+                ctx.fillText(`+${ratingIncrease} рейтинга`, CANVAS_WIDTH / 2, 320);
+
+                ctx.font = '24px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.fillText(`Ваш рейтинг: ${playerRating}`, CANVAS_WIDTH / 2, 380);
+
+                ctx.fillStyle = '#4ECDC4';
+                ctx.fillRect(CANVAS_WIDTH / 2 - 130, 420, 260, 60);
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, 420, 260, 60);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, 458);
+            }
+
+            static drawShop(ctx, playerRating, ownedSkins, selectedSkin) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ГАРАЖ', CANVAS_WIDTH / 2, 60);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '20px Arial';
+                ctx.fillText(`Ваш рейтинг: ${playerRating}`, CANVAS_WIDTH / 2, 100);
+
+                const skins = [
+                    { name: 'Красная', color: '#FF6B6B', price: 200, key: 'red' },
+                    { name: 'Синяя', color: '#4ECDC4', price: 400, key: 'blue' },
+                    { name: 'Жёлтая', color: '#FFD700', price: 600, key: 'yellow' }
+                ];
+
+                for (let i = 0; i < skins.length; i++) {
+                    const skin = skins[i];
+                    const x = 150 + i * 330;
+                    const y = 200;
+
+                    // Рамка
+                    const owned = ownedSkins.includes(skin.key);
+                    ctx.strokeStyle = owned && selectedSkin === skin.key ? '#00FF00' : owned ? '#FFFFFF' : '#666666';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x - 50, y - 50, 200, 200);
+
+                    // Машина (прямоугольник с цветом)
+                    ctx.fillStyle = skin.color;
+                    ctx.fillRect(x - 30, y - 30, 60, 50);
+                    ctx.fillStyle = '#87CEEB';
+                    ctx.fillRect(x - 20, y - 20, 40, 15);
+
+                    // Название
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 18px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(skin.name, x + 50, y + 80);
+
+                    // Цена или "КУПЛЕНО"
+                    if (owned) {
+                        ctx.fillStyle = '#90EE90';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillText('✅ КУПЛЕНО', x + 50, y + 110);
+                        if (selectedSkin === skin.key) {
+                            ctx.fillText('(АКТИВНО)', x + 50, y + 135);
+                        }
+                    } else {
+                        ctx.fillStyle = '#FFD700';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.fillText(`${skin.price} рейтинга`, x + 50, y + 110);
+                    }
+                }
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Нажми на скин чтобы купить/активировать', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
+
+                ctx.fillStyle = '#4ECDC4';
+                ctx.fillRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText('Space - Закрыть', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
+            }
+
+            static drawLeaderboard(ctx, players) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 48px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ЛИДЕРБОРД', CANVAS_WIDTH / 2, 60);
+
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 20px Arial';
+                for (let i = 0; i < Math.min(10, players.length); i++) {
+                    const player = players[i];
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+                    const y = 120 + i * 45;
+
+                    ctx.fillStyle = i < 3 ? '#FFD700' : '#FFFFFF';
+                    ctx.fillText(`${medal} ${player.name}: ${player.rating}`, CANVAS_WIDTH / 2, y);
+                }
+
+                ctx.fillStyle = '#4ECDC4';
+                ctx.fillRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
+            }
+
+            static drawPause(ctx) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.fillStyle = '#FFD700';
+                ctx.font = 'bold 80px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('ПАУЗА', CANVAS_WIDTH / 2, 150);
+
+                ctx.fillStyle = '#4ECDC4';
+                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 280, 300, 70);
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 280, 300, 70);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 28px Arial';
+                ctx.fillText('P - Продолжить', CANVAS_WIDTH / 2, 328);
+
+                ctx.fillStyle = '#FF6B6B';
+                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 390, 300, 70);
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 390, 300, 70);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, 438);
+            }
+        }
+
+        class GameManager {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.state = 'menu';
+                this.selectedTrack = 0;
+                this.trackKeys = Object.keys(TRACKS);
+                this.inputHandler = new InputHandler();
+                this.selectPressed = false;
+                this.trackSelectPressed = false;
+                this.playerName = this.loadPlayerName();
+                this.playerRating = this.loadPlayerRating();
+                this.ownedSkins = this.loadOwnedSkins();
+                this.selectedSkin = this.loadSelectedSkin();
+            }
+
+            loadPlayerName() {
+                const saved = localStorage.getItem('playerName');
+                return saved || 'Игрок';
+            }
+
+            savePlayerName(name) {
+                localStorage.setItem('playerName', name);
+                this.playerName = name;
+            }
+
+            loadPlayerRating() {
+                return parseInt(localStorage.getItem('playerRating') || '1000', 10);
+            }
+
+            savePlayerRating(rating) {
+                localStorage.setItem('playerRating', Math.max(0, rating));
+                this.playerRating = rating;
+            }
+
+            getLeaderboard() {
+                const saved = localStorage.getItem('leaderboard');
+                const base = saved ? JSON.parse(saved) : [];
+                const filtered = base.filter(p => p && p.name && typeof p.rating === 'number');
+                return filtered.sort((a, b) => b.rating - a.rating).slice(0, 10);
+            }
+
+            saveToLeaderboard() {
+                const lb = this.getLeaderboard();
+                const exists = lb.find(p => p.name === this.playerName);
+                if (exists) {
+                    exists.rating = this.playerRating;
+                } else {
+                    lb.push({ name: this.playerName, rating: this.playerRating });
+                }
+                localStorage.setItem('leaderboard', JSON.stringify(lb.sort((a, b) => b.rating - a.rating).slice(0, 100)));
+            }
+
+            // ========== LEVEL SYSTEM ==========
+            getLevel() {
+                const baseLevels = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250];
+                for (let i = 0; i < baseLevels.length - 1; i++) {
+                    if (this.playerRating >= baseLevels[i] && this.playerRating < baseLevels[i + 1]) {
+                        return i + 1;
+                    }
+                }
+                return Math.min(50, Math.floor(this.playerRating / 500) + 1);
+            }
+
+            getLevelProgress() {
+                const baseLevels = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250];
+                const currentLevel = this.getLevel();
+                if (currentLevel >= baseLevels.length) {
+                    return 100;
+                }
+                const levelStart = baseLevels[currentLevel - 1];
+                const levelEnd = baseLevels[currentLevel];
+                const progress = ((this.playerRating - levelStart) / (levelEnd - levelStart)) * 100;
+                return Math.min(100, Math.max(0, progress));
+            }
+
+            // ========== ANALYTICS ==========
+            initAnalytics() {
+                const now = new Date();
+                const today = Math.floor(now.getTime() / 86400000);
+                const analytics = {
+                    playerId: this.playerName + '_' + Math.random().toString(36).substr(2, 9),
+                    firstLaunchDate: today,
+                    lastLaunchDate: today,
+                    totalSessions: 1,
+                    totalRaces: 0,
+                    successfulDrifts: 0,
+                    totalPlayTime: 0,
+                    sessionStartTime: now.getTime()
+                };
+                localStorage.setItem('analytics', JSON.stringify(analytics));
+                return analytics;
+            }
+
+            getAnalytics() {
+                const saved = localStorage.getItem('analytics');
+                if (!saved) return this.initAnalytics();
+                return JSON.parse(saved);
+            }
+
+            updateAnalytics() {
+                const analytics = this.getAnalytics();
+                const now = new Date();
+                const today = Math.floor(now.getTime() / 86400000);
+
+                if (analytics.lastLaunchDate !== today) {
+                    analytics.totalSessions++;
+                    analytics.lastLaunchDate = today;
+                }
+
+                localStorage.setItem('analytics', JSON.stringify(analytics));
+            }
+
+            recordRace() {
+                const analytics = this.getAnalytics();
+                analytics.totalRaces++;
+                localStorage.setItem('analytics', JSON.stringify(analytics));
+            }
+
+            recordDrift() {
+                const analytics = this.getAnalytics();
+                analytics.successfulDrifts++;
+                localStorage.setItem('analytics', JSON.stringify(analytics));
+            }
+
+            exportAnalytics() {
+                const analytics = this.getAnalytics();
+                const leaderboard = this.getLeaderboard();
+                const data = {
+                    analytics: analytics,
+                    playerRating: this.playerRating,
+                    leaderboard: leaderboard,
+                    exportDate: new Date().toISOString()
+                };
+                return JSON.stringify(data, null, 2);
+            }
+
+            // ========== SHOP SYSTEM ==========
+            loadOwnedSkins() {
+                const saved = localStorage.getItem('ownedSkins');
+                if (!saved) {
+                    // По умолчанию красная машина есть
+                    localStorage.setItem('ownedSkins', JSON.stringify(['red']));
+                    return ['red'];
+                }
+                return JSON.parse(saved);
+            }
+
+            loadSelectedSkin() {
+                return localStorage.getItem('selectedSkin') || 'red';
+            }
+
+            saveSelectedSkin(skin) {
+                localStorage.setItem('selectedSkin', skin);
+            }
+
+            buySkin(skinKey, price) {
+                const ownedSkins = this.loadOwnedSkins();
+                if (ownedSkins.includes(skinKey)) {
+                    this.saveSelectedSkin(skinKey);
+                    return true;
+                }
+
+                if (this.playerRating >= price) {
+                    const newRating = this.playerRating - price;
+                    this.savePlayerRating(newRating);
+                    ownedSkins.push(skinKey);
+                    localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
+                    this.saveSelectedSkin(skinKey);
+                    soundManager.playFinishSound(); // ding sound for purchase
+                    return true;
+                }
+                return false;
+            }
+
+            getCurrentSkinColor() {
+                const skins = {
+                    'red': '#FF6B6B',
+                    'blue': '#4ECDC4',
+                    'yellow': '#FFD700'
+                };
+                const selectedSkin = this.loadSelectedSkin();
+                return skins[selectedSkin] || '#FF6B6B';
+            }
+
+            update() {
+                if (this.state === 'menu') {
+                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
+                        this.startTrackSelect();
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isSelectPressed()) {
+                        this.selectPressed = false;
+                    }
+                } else if (this.state === 'trackSelect') {
+                    const movement = this.inputHandler.getMovement();
+                    if (movement !== 0 && !this.trackSelectPressed) {
+                        this.selectedTrack = (this.selectedTrack + movement + this.trackKeys.length) % this.trackKeys.length;
+                        this.trackSelectPressed = true;
+                    }
+                    if (movement === 0) {
+                        this.trackSelectPressed = false;
+                    }
+
+                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
+                        const trackKey = this.trackKeys[this.selectedTrack];
+                        this.startGame(trackKey);
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isSelectPressed()) {
+                        this.selectPressed = false;
+                    }
+                } else if (this.state === 'playing') {
+                    if (this.inputHandler.isPausePressed() && !this.pausePressed) {
+                        this.state = 'pause';
+                        this.pausePressed = true;
+                    }
+                    if (!this.inputHandler.isPausePressed()) {
+                        this.pausePressed = false;
+                    }
+
+                    this.playerCar.update(this.inputHandler, this.trackManager.track, this);
+                    for (let bot of this.botCars) {
+                        bot.update(this.trackManager.track);
+                    }
+
+                    let finishedCount = 0;
+                    if (!this.playerFinished && this.playerCar.finish()) {
+                        this.playerFinished = true;
+                        finishedCount++;
+                    }
+
+                    for (let i = 0; i < this.botCars.length; i++) {
+                        if (!this.botCars[i].finished && this.botCars[i].finish()) {
+                            this.botCars[i].finished = true;
+                            finishedCount++;
+                        }
+                    }
+
+                    if (finishedCount > 0) {
+                        const positions = [];
+                        if (this.playerFinished) positions.push({ type: 'player', y: this.playerCar.y });
+                        for (let i = 0; i < this.botCars.length; i++) {
+                            if (this.botCars[i].finished) {
+                                positions.push({ type: 'bot', y: this.botCars[i].y, index: i });
+                            }
+                        }
+
+                        positions.sort((a, b) => b.y - a.y);
+
+                        for (let i = 0; i < positions.length; i++) {
+                            if (positions[i].type === 'player') {
+                                this.playerPosition = i + 1;
+                                this.coinsEarned = this.playerPosition === 1 ? 1000 : (this.playerPosition === 2 ? 500 : 0);
+                            }
+                        }
+                    }
+
+                    if (this.playerFinished && this.botCars.every(bot => bot.finished)) {
+                        this.finishRace();
+                    }
+                } else if (this.state === 'pause') {
+                    if (this.inputHandler.isPausePressed() && !this.pausePressed) {
+                        this.state = 'playing';
+                        this.pausePressed = true;
+                    }
+                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
+                        this.state = 'trackSelect';
+                        this.pausePressed = false;
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isPausePressed()) {
+                        this.pausePressed = false;
+                    }
+                    if (!this.inputHandler.isSelectPressed()) {
+                        this.selectPressed = false;
+                    }
+                } else if (this.state === 'results') {
+                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
+                        this.state = 'leaderboard';
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isSelectPressed()) {
+                        this.selectPressed = false;
+                    }
+                } else if (this.state === 'leaderboard') {
+                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
+                        this.state = 'menu';
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isSelectPressed()) {
+                        this.selectPressed = false;
+                    }
+                } else if (this.state === 'shop') {
+                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
+                        this.state = 'menu';
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isSelectPressed()) {
+                        this.selectPressed = false;
+                    }
+                }
+            }
+
+            startTrackSelect() {
+                this.state = 'trackSelect';
+                this.selectedTrack = 0;
+            }
+
+            startGame(trackKey) {
+                this.state = 'playing';
+                this.updateAnalytics();
+                this.levelBefore = this.getLevel();
+                this.trackManager = new TrackManager(trackKey);
+                this.playerCar = new PlayerCar(CANVAS_WIDTH / 2 - 50, 50);
+                this.botCars = [
+                    new BotCar(CANVAS_WIDTH / 2 - 100, 50),
+                    new BotCar(CANVAS_WIDTH / 2 + 50, 50)
+                ];
+                this.playerFinished = false;
+                this.playerPosition = 0;
+                this.pausePressed = false;
+                this.selectPressed = false;
+                this.levelUpMessage = '';
+            }
+
+            finishRace() {
+                this.state = 'results';
+                soundManager.playFinishSound();
+                this.recordRace();
+                const ratingIncrease = this.playerPosition === 1 ? 50 : this.playerPosition === 2 ? 25 : 10;
+                const newRating = this.playerRating + ratingIncrease;
+                this.savePlayerRating(newRating);
+                this.saveToLeaderboard();
+
+                const levelAfter = this.getLevel();
+                if (levelAfter > this.levelBefore) {
+                    this.levelUpMessage = `🎉 НОВЫЙ УРОВЕНЬ ${levelAfter}!`;
+                    soundManager.playFinishSound(); // extra ding for level up
+                } else {
+                    this.levelUpMessage = '';
+                }
+            }
+
+            render() {
+                if (this.state === 'menu') {
+                    UIManager.drawMenu(this.ctx);
+                } else if (this.state === 'trackSelect') {
+                    UIManager.drawTrackSelect(this.ctx, TRACKS, this.selectedTrack);
+                } else if (this.state === 'playing' || this.state === 'pause') {
+                    const cameraOffset = Math.max(0, this.playerCar.y - 200);
+                    this.trackManager.render(this.ctx, cameraOffset);
+                    this.botCars.forEach(bot => bot.render(this.ctx, cameraOffset));
+                    this.playerCar.render(this.ctx, cameraOffset, this.trackManager.track, this.getCurrentSkinColor());
+                    UIManager.drawHUD(this.ctx, this.playerCar.y, this.botCars[0].y, TRACKS[this.trackKeys[this.selectedTrack]].name, this.getLevel(), this.getLevelProgress());
+                    if (this.state === 'pause') {
+                        UIManager.drawPause(this.ctx);
+                    }
+                } else if (this.state === 'results') {
+                    const cameraOffset = Math.max(0, this.playerCar.y - 200);
+                    this.trackManager.render(this.ctx, cameraOffset);
+                    UIManager.drawResults(this.ctx, this.playerPosition, this.playerRating, this.levelUpMessage || '');
+                } else if (this.state === 'leaderboard') {
+                    UIManager.drawLeaderboard(this.ctx, this.getLeaderboard());
+                } else if (this.state === 'shop') {
+                    UIManager.drawShop(this.ctx, this.playerRating, this.ownedSkins, this.selectedSkin);
+                }
+            }
+        }
+
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('gameCanvas');
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
+            const gameManager = new GameManager(canvas);
+
+            // Горячая клавиша M для экспорта метрик
+            window.addEventListener('keydown', (e) => {
+                if ((e.key === 'm' || e.key === 'M') && e.ctrlKey) {
+                    e.preventDefault();
+                    const metrics = gameManager.exportAnalytics();
+                    console.log('📊 МЕТРИКИ:', metrics);
+                    alert('Метрики скопированы в консоль (F12 → Console):\n\n' + metrics.substring(0, 200) + '...');
+                }
+            });
+
+            function gameLoop() {
+                gameManager.update();
+                gameManager.render();
+                requestAnimationFrame(gameLoop);
+            }
+            gameLoop();
+        });
+
+        // Регистрация Service Worker для offline режима
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').then((reg) => {
+                    console.log('✅ Service Worker зарегистрирован');
+                }).catch((err) => {
+                    console.log('❌ Service Worker ошибка:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

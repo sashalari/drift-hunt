@@ -1,7 +1,7 @@
 {
-  "name": "Гоночная Игра",
-  "short_name": "Гонка",
-  "description": "Аркадная гоночная игра с дрифтом, 6 трассами и системой монет",
+  "name": "DRIFT HUNT — 3D Arcade Racing Game",
+  "short_name": "DRIFT HUNT",
+  "description": "DRIFT HUNT — аркадная гоночная игра 3D от первого лица с дрифтом и полицейской погоней",
   "start_url": "/index.html",
   "scope": "/",
   "display": "fullscreen",

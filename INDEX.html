@@ -211,6 +211,10 @@
             isMetricsPressed() {
                 return this.keys['m'] || this.keys['M'];
             }
+
+            isShopPressed() {
+                return this.keys['s'] || this.keys['S'];
+            }
         }
 
         class PlayerCar {
@@ -488,7 +492,7 @@
                 ctx.fillText('← Стрелки → для выбора | Space/Enter для начала', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
             }
 
-            static drawMenu(ctx) {
+            static drawMenu(ctx, dailyQuest) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
                 ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -501,33 +505,53 @@
                 ctx.fillStyle = '#CCCCCC';
                 ctx.fillText('Расширенная версия (ПЛАН B)', CANVAS_WIDTH / 2, 130);
 
+                // ЕЖЕДНЕВНЫЙ КВЕСТ
+                if (dailyQuest) {
+                    ctx.fillStyle = dailyQuest.completed ? '#90EE90' : '#FFD700';
+                    ctx.fillRect(20, 160, 300, 80);
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(20, 160, 300, 80);
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'left';
+                    if (dailyQuest.completed) {
+                        ctx.fillText('✅ КВЕСТ ВЫПОЛНЕН', 35, 185);
+                        ctx.fillText('Награда: +200 рейтинга', 35, 210);
+                    } else {
+                        ctx.fillText('📋 ЕЖЕДНЕВНЫЙ КВЕСТ', 35, 185);
+                        ctx.fillText(`Выиграй 1 гонку (${dailyQuest.current}/1)`, 35, 210);
+                    }
+                    ctx.textAlign = 'center';
+                }
+
                 // Большая кнопка НАЧАТЬ
                 ctx.fillStyle = '#FFD700';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 180, 300, 80);
+                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 280, 300, 80);
                 ctx.strokeStyle = '#FFFF00';
                 ctx.lineWidth = 4;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 180, 300, 80);
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 280, 300, 80);
                 ctx.fillStyle = '#000000';
                 ctx.font = 'bold 48px Arial';
-                ctx.fillText('НАЧАТЬ', CANVAS_WIDTH / 2, 238);
+                ctx.fillText('НАЧАТЬ', CANVAS_WIDTH / 2, 338);
 
                 ctx.font = '18px Arial';
                 ctx.fillStyle = '#90EE90';
-                ctx.fillText('Управление:', CANVAS_WIDTH / 2, 330);
+                ctx.fillText('Управление:', CANVAS_WIDTH / 2, 420);
 
                 ctx.fillStyle = '#FFFFFF';
                 ctx.font = '15px Arial';
-                ctx.fillText('← → Стрелки - Влево/Вправо', CANVAS_WIDTH / 2, 365);
-                ctx.fillText('Shift или D - Дрифт', CANVAS_WIDTH / 2, 390);
-                ctx.fillText('P - Пауза', CANVAS_WIDTH / 2, 415);
+                ctx.fillText('← → Стрелки - Влево/Вправо', CANVAS_WIDTH / 2, 455);
+                ctx.fillText('Shift или D - Дрифт', CANVAS_WIDTH / 2, 480);
+                ctx.fillText('P - Пауза | S - Магазин', CANVAS_WIDTH / 2, 505);
 
                 ctx.fillStyle = '#FFD700';
                 ctx.font = '20px Arial';
-                ctx.fillText('➜ Нажми ENTER чтобы начать! ➜', CANVAS_WIDTH / 2, 470);
+                ctx.fillText('➜ Нажми ENTER чтобы начать! ➜', CANVAS_WIDTH / 2, 560);
 
                 ctx.fillStyle = '#90EE90';
                 ctx.font = '14px Arial';
-                ctx.fillText('Цель: Обогнать ботов и финишировать первым!', CANVAS_WIDTH / 2, 530);
+                ctx.fillText('Цель: Обогнать ботов и финишировать первым!', CANVAS_WIDTH / 2, 610);
             }
 
             static drawHUD(ctx, playerY, botY, trackName, level, levelProgress) {
@@ -565,7 +589,7 @@
                 ctx.fillText('Shift/D = Дрифт, P = Пауза', 20, 110);
             }
 
-            static drawResults(ctx, position, playerRating, levelUpMessage) {
+            static drawResults(ctx, position, playerRating, levelUpMessage, questCompleted) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
                 ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
                 ctx.fillStyle = '#FFFFFF';
@@ -590,27 +614,36 @@
                     ctx.fillText(levelUpMessage, CANVAS_WIDTH / 2, 190);
                 }
 
+                // QUEST COMPLETED MESSAGE
+                if (questCompleted) {
+                    ctx.fillStyle = '#90EE90';
+                    ctx.font = 'bold 44px Arial';
+                    ctx.fillText('✅ КВЕСТ ВЫПОЛНЕН!', CANVAS_WIDTH / 2, 240);
+                    ctx.font = 'bold 32px Arial';
+                    ctx.fillText('+200 БОНУСА', CANVAS_WIDTH / 2, 280);
+                }
+
                 ctx.fillStyle = '#FFFFFF';
                 ctx.font = '32px Arial';
-                ctx.fillText(`Позиция: ${position}`, CANVAS_WIDTH / 2, 250);
+                ctx.fillText(`Позиция: ${position}`, CANVAS_WIDTH / 2, 330);
 
                 const ratingIncrease = position === 1 ? 50 : position === 2 ? 25 : 10;
                 ctx.font = 'bold 40px Arial';
                 ctx.fillStyle = '#90EE90';
-                ctx.fillText(`+${ratingIncrease} рейтинга`, CANVAS_WIDTH / 2, 320);
+                ctx.fillText(`+${ratingIncrease} рейтинга`, CANVAS_WIDTH / 2, 400);
 
                 ctx.font = '24px Arial';
                 ctx.fillStyle = '#FFD700';
-                ctx.fillText(`Ваш рейтинг: ${playerRating}`, CANVAS_WIDTH / 2, 380);
+                ctx.fillText(`Ваш рейтинг: ${playerRating}`, CANVAS_WIDTH / 2, 450);
 
                 ctx.fillStyle = '#4ECDC4';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 130, 420, 260, 60);
+                ctx.fillRect(CANVAS_WIDTH / 2 - 130, 520, 260, 60);
                 ctx.strokeStyle = '#FFFFFF';
                 ctx.lineWidth = 2;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, 420, 260, 60);
+                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, 520, 260, 60);
                 ctx.fillStyle = '#FFFFFF';
                 ctx.font = 'bold 24px Arial';
-                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, 458);
+                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, 558);
             }
 
             static drawShop(ctx, playerRating, ownedSkins, selectedSkin) {
@@ -927,13 +960,72 @@
                 return skins[selectedSkin] || '#FF6B6B';
             }
 
+            // ========== DAILY QUEST SYSTEM ==========
+            getDailyQuestData() {
+                const today = Math.floor(new Date().getTime() / 86400000);
+                const saved = localStorage.getItem('dailyQuest');
+                if (!saved) {
+                    return this.initDailyQuest(today);
+                }
+                const quest = JSON.parse(saved);
+                if (quest.date !== today) {
+                    // Новый день - новый квест
+                    return this.initDailyQuest(today);
+                }
+                return quest;
+            }
+
+            initDailyQuest(today) {
+                const quest = {
+                    date: today,
+                    type: 'winRace', // Выиграй 1 гонку
+                    target: 1,
+                    current: 0,
+                    completed: false,
+                    reward: 200
+                };
+                localStorage.setItem('dailyQuest', JSON.stringify(quest));
+                return quest;
+            }
+
+            updateDailyQuestProgress(position) {
+                const quest = this.getDailyQuestData();
+                if (quest.completed) return false;
+
+                if (quest.type === 'winRace' && position === 1) {
+                    quest.current++;
+                    if (quest.current >= quest.target) {
+                        quest.completed = true;
+                    }
+                    localStorage.setItem('dailyQuest', JSON.stringify(quest));
+                    return quest.completed;
+                }
+                return false;
+            }
+
+            completeDailyQuest() {
+                const quest = this.getDailyQuestData();
+                if (quest.completed && !quest.rewarded) {
+                    const newRating = this.playerRating + quest.reward;
+                    this.savePlayerRating(newRating);
+                    quest.rewarded = true;
+                    localStorage.setItem('dailyQuest', JSON.stringify(quest));
+                    return quest.reward;
+                }
+                return 0;
+            }
+
             update() {
                 if (this.state === 'menu') {
                     if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
                         this.startTrackSelect();
                         this.selectPressed = true;
                     }
-                    if (!this.inputHandler.isSelectPressed()) {
+                    if (this.inputHandler.isShopPressed() && !this.selectPressed) {
+                        this.state = 'shop';
+                        this.selectPressed = true;
+                    }
+                    if (!this.inputHandler.isSelectPressed() && !this.inputHandler.isShopPressed()) {
                         this.selectPressed = false;
                     }
                 } else if (this.state === 'trackSelect') {
@@ -1072,15 +1164,27 @@
                 this.state = 'results';
                 soundManager.playFinishSound();
                 this.recordRace();
+
                 const ratingIncrease = this.playerPosition === 1 ? 50 : this.playerPosition === 2 ? 25 : 10;
-                const newRating = this.playerRating + ratingIncrease;
+                let newRating = this.playerRating + ratingIncrease;
+
+                // Проверяем квест
+                this.questCompletedThisRace = false;
+                if (this.updateDailyQuestProgress(this.playerPosition)) {
+                    // Квест завершён!
+                    const questReward = this.completeDailyQuest();
+                    newRating += questReward;
+                    this.questCompletedThisRace = true;
+                    soundManager.playFinishSound(); // extra ding for quest completion
+                }
+
                 this.savePlayerRating(newRating);
                 this.saveToLeaderboard();
 
                 const levelAfter = this.getLevel();
                 if (levelAfter > this.levelBefore) {
                     this.levelUpMessage = `🎉 НОВЫЙ УРОВЕНЬ ${levelAfter}!`;
-                    soundManager.playFinishSound(); // extra ding for level up
+                    soundManager.playFinishSound();
                 } else {
                     this.levelUpMessage = '';
                 }
@@ -1088,7 +1192,7 @@
 
             render() {
                 if (this.state === 'menu') {
-                    UIManager.drawMenu(this.ctx);
+                    UIManager.drawMenu(this.ctx, this.getDailyQuestData());
                 } else if (this.state === 'trackSelect') {
                     UIManager.drawTrackSelect(this.ctx, TRACKS, this.selectedTrack);
                 } else if (this.state === 'playing' || this.state === 'pause') {
@@ -1103,7 +1207,7 @@
                 } else if (this.state === 'results') {
                     const cameraOffset = Math.max(0, this.playerCar.y - 200);
                     this.trackManager.render(this.ctx, cameraOffset);
-                    UIManager.drawResults(this.ctx, this.playerPosition, this.playerRating, this.levelUpMessage || '');
+                    UIManager.drawResults(this.ctx, this.playerPosition, this.playerRating, this.levelUpMessage || '', this.questCompletedThisRace || false);
                 } else if (this.state === 'leaderboard') {
                     UIManager.drawLeaderboard(this.ctx, this.getLeaderboard());
                 } else if (this.state === 'shop') {

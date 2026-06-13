@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pako Highway 3D - CarX Style (Realistic)</title>
+    <title>DRIFT HUNT — 3D Arcade Racing Game</title>
     <style>
         * {
             margin: 0;
@@ -194,8 +194,8 @@
 </head>
 <body>
     <div id="menu">
-        <h1>PAKO 3D</h1>
-        <p>🏁 Реалистичная гонка</p>
+        <h1>DRIFT HUNT</h1>
+        <p>🏁 Аркадная гонка от первого лица</p>
         <p>Управление: ← → стрелки | Shift - дрифт | E - Нитро</p>
         <button onclick="showCarSelect()">НАЧАТЬ</button>
     </div>
@@ -251,7 +251,7 @@
         // === ИНИЦИАЛИЗАЦИЯ ===
         function initThreeJS() {
             scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0x4A90E2, 200, 3000); // Яркое голубое небо
+            scene.fog = new THREE.Fog(0x4A90E2, 300, 5000); // Видна дорога далеко на горизонт
             scene.background = new THREE.Color(0x4A90E2); // Яркое голубое
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
@@ -401,8 +401,15 @@
         }
 
         // === ФУНКЦИЯ КРИВОЙ ДОРОГИ ===
+        // S-образные повороты + волны для интересного геймплея
         function getRoadOffset(z) {
-            return Math.sin(z / 100) * 5 + Math.cos(z / 150) * 4;
+            // Комбинация кривых для S-поворотов
+            const sin1 = Math.sin(z / 200) * 8;      // Медленный поворот влево
+            const sin2 = Math.sin(z / 150) * 6;      // Средний поворот вправо
+            const wave = Math.sin(z / 300) * 4;      // Волны
+            const tight = Math.cos(z / 100) * 3;     // Плотные повороты
+
+            return sin1 + sin2 + wave + tight;
         }
 
         // === СОЗДАНИЕ LOW POLY МАШИНЫ ===
@@ -454,6 +461,14 @@
             roof.castShadow = true;
             roof.receiveShadow = true;
             group.add(roof);
+
+            // ВИДИМЫЙ КАПОТ СПЕРЕДИ (для first-person view)
+            const visibleHoodGeom = new THREE.BoxGeometry(bodyWidth - 0.3, 0.3, 0.8);
+            const visibleHood = new THREE.Mesh(visibleHoodGeom, bodyMat);
+            visibleHood.position.set(0, -0.5, 1.1); // Видно спереди внизу экрана
+            visibleHood.castShadow = true;
+            visibleHood.receiveShadow = true;
+            group.add(visibleHood);
 
             // Окна
             const windowGeom = new THREE.BoxGeometry(1.2, 0.6, 0.15);
@@ -697,7 +712,7 @@
 
         // === СОЗДАНИЕ ДОРОГИ ===
         function createRoad() {
-            for (let i = 0; i < 10; i++) { // 10 сегментов вместо 5 - ДОЛЬШЕ ДОРОГА
+            for (let i = 0; i < 20; i++) { // 20 сегментов - видна дорога ДАЛЕКО на горизонт
                 createRoadSegment(i * -50);
             }
         }
@@ -778,7 +793,7 @@
             });
             roadSegments = roadSegments.filter(s => s.z <= 50);
 
-            if (roadSegments.length < 10) {
+            if (roadSegments.length < 20) { // Поддерживаем 20 сегментов для длинной дороги
                 const lastZ = roadSegments[roadSegments.length - 1]?.z || 0;
                 createRoadSegment(lastZ - 50);
             }

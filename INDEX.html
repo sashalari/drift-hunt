@@ -3,1289 +3,1039 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Гоночная Игра - Расширенная (ПЛАН B)</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#FFD700">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Гонка">
+    <title>Pako Highway 3D - CarX Style (Realistic)</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             width: 100%;
             height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            font-family: 'Arial', sans-serif;
+            background: #000;
+            font-family: Arial, sans-serif;
             overflow: hidden;
         }
-
-        canvas {
-            border: 4px solid #fff;
-            background: #fff;
-            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
-            cursor: none;
+        #canvas {
             display: block;
-            max-width: 100%;
-            max-height: 100%;
-        }
-
-        .container {
             width: 100%;
             height: 100%;
+        }
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #0f0;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #0f0;
+            z-index: 10;
+        }
+        #speed {
+            font-size: 32px;
+            margin-top: 10px;
+        }
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0f;
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 100;
+            color: #0f0;
+            text-align: center;
+        }
+        #menu h1 {
+            font-size: 80px;
+            text-shadow: 0 0 20px #f0f;
+            color: #f0f;
+        }
+        #menu p {
+            font-size: 24px;
+        }
+        #menu button {
+            padding: 20px 40px;
+            font-size: 24px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+        #menu button:hover {
+            background: #00cc00;
+        }
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            z-index: 100;
+        }
+        #carSelectScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0f;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            z-index: 100;
+            color: #0f0;
+            text-align: center;
+            overflow-y: auto;
+        }
+        #carSelectScreen h1 {
+            font-size: 60px;
+            color: #f0f;
+            text-shadow: 0 0 20px #f0f;
+            margin-top: 30px;
+        }
+        .car-models {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            flex-wrap: wrap;
+            width: 100%;
+            max-width: 1200px;
+        }
+        .car-model {
+            background: #1a1a1f;
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            width: 200px;
+            transition: all 0.3s;
+        }
+        .car-model:hover {
+            border-color: #00ff00;
+            box-shadow: 0 0 20px #00ff00;
+            transform: scale(1.05);
+        }
+        .car-model.selected {
+            border-color: #f0f;
+            box-shadow: 0 0 30px #f0f;
+            background: #2a1a2f;
+        }
+        .car-model h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #f0f;
+        }
+        .car-model p {
+            font-size: 14px;
+            color: #0f0;
+            margin-bottom: 15px;
+        }
+        .color-options {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        .color-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .color-btn:hover {
+            border-color: #00ff00;
+            transform: scale(1.1);
+        }
+        .color-btn.selected {
+            border-color: #ffff00;
+            box-shadow: 0 0 10px #ffff00;
+        }
+        .button-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 40px;
+            margin-bottom: 30px;
+        }
+        .button-group button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background: #00ff00;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+        .button-group button:hover {
+            background: #00cc00;
+            transform: scale(1.05);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <canvas id="gameCanvas"></canvas>
+    <div id="menu">
+        <h1>PAKO 3D</h1>
+        <p>🏁 Реалистичная гонка</p>
+        <p>Управление: ← → стрелки | Shift - дрифт | E - Нитро</p>
+        <button onclick="showCarSelect()">НАЧАТЬ</button>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="hud" style="display: none;">
+        <div>Очки: <span id="score">0</span></div>
+        <div id="speed">Скорость: 0 км/ч</div>
+    </div>
+    <canvas id="wheelCanvas" style="position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; display: none;"></canvas>
+    <div id="mirror" style="position: absolute; top: 20px; right: 20px; width: 150px; height: 100px; border: 3px solid #00ff00; background: #000; display: none; overflow: hidden;">
+        <canvas id="mirrorCanvas" style="width: 100%; height: 100%;"></canvas>
+    </div>
+    <div id="gameOverScreen">
+        <h1 style="color: #ff0000; font-size: 80px; text-shadow: 0 0 20px #ff0000;">GAME OVER</h1>
+        <div style="color: #ffff00; font-size: 36px;">Очки: <span id="finalScore">0</span></div>
+        <button onclick="location.reload()" style="padding: 20px 40px; font-size: 24px; background: #00ff00; color: #000; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">ЗАНОВО</button>
     </div>
 
+    <div id="carSelectScreen">
+        <h1>🏎️ ВЫБЕРИ СВОЮ МАШИНУ</h1>
+        <p style="font-size: 18px; color: #00ff00; margin-bottom: 30px;">Выбери модель и цвет</p>
+        <div class="car-models" id="carModels"></div>
+        <div class="button-group">
+            <button onclick="showMenu()">← НАЗАД</button>
+            <button onclick="startGameWithCar()" id="startBtn" disabled>ПОЕХАЛИ →</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // ========== SOUND SYSTEM ==========
-        class SoundManager {
-            constructor() {
-                this.audioContext = null;
-                try {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                } catch (e) {
-                    console.log('Web Audio API not available');
-                }
-            }
+        // === ПЕРЕМЕННЫЕ ===
+        let scene, camera, renderer;
+        let playerCar, road, roadSegments = [];
+        let inputHandler = {};
+        let gameState = 'menu';
+        let score = 0;
+        const MAX_SPEED = 200;
+        let enemies = [], spawnCounter = 0;
+        let nitroActive = false, nitroTimer = 0, nitroCooldown = 0;
+        let smokeParticles = [];
 
-            playDriftSound() {
-                if (!this.audioContext) return;
-                const ctx = this.audioContext;
-                const now = ctx.currentTime;
+        // === ВЫБОР МАШИН ===
+        let selectedCarModel = 'bmw';
+        let selectedCarColor = 0xff0000;
 
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.frequency.setValueAtTime(100, now);
-                osc.frequency.exponentialRampToValueAtTime(200, now + 0.1);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-
-                osc.start(now);
-                osc.stop(now + 0.1);
-            }
-
-            playFinishSound() {
-                if (!this.audioContext) return;
-                const ctx = this.audioContext;
-                const now = ctx.currentTime;
-
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-
-                osc.frequency.setValueAtTime(500, now);
-                osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-
-                osc.start(now);
-                osc.stop(now + 0.3);
-            }
-        }
-
-        const CANVAS_WIDTH = 1280;
-        const CANVAS_HEIGHT = 720;
-        const CAR_WIDTH = 40;
-        const CAR_HEIGHT = 60;
-        const TRACK_LENGTH = 6000;
-        const soundManager = new SoundManager();
-
-        // ========== TRACK DEFINITIONS ==========
-        const TRACKS = {
-            'desert1': {
-                name: 'ПУСТЫНЯ 1',
-                bg: '#8B6914',
-                road: '#333333',
-                lines: '#FFFF00',
-                difficulty: 1,
-                path: (y) => 320 + Math.sin(y / 400) * 40
-            },
-            'desert2': {
-                name: 'ПУСТЫНЯ 2 (ВОЛНЫ)',
-                bg: '#8B6914',
-                road: '#333333',
-                lines: '#FFFF00',
-                difficulty: 2,
-                path: (y) => 320 + Math.sin(y / 300) * 80 + Math.cos(y / 500) * 50
-            },
-            'city1': {
-                name: 'ГОРОД 1',
-                bg: '#555555',
-                road: '#1a1a1a',
-                lines: '#FFFFFF',
-                difficulty: 2,
-                path: (y) => 300 + Math.sin(y / 250) * 100
-            },
-            'city2': {
-                name: 'ГОРОД 2 (S-ПОВОРОТЫ)',
-                bg: '#555555',
-                road: '#1a1a1a',
-                lines: '#FFFFFF',
-                difficulty: 3,
-                path: (y) => {
-                    if (y < 1500) return 280 + Math.sin(y / 200) * 80;
-                    else return 360 + Math.sin(y / 200) * 80;
-                }
-            },
-            'mountain': {
-                name: 'ГОРЫ (СПИРАЛЬ)',
-                bg: '#4A5859',
-                road: '#2a3435',
-                lines: '#FFD700',
-                difficulty: 4,
-                path: (y) => 320 + Math.sin(y / 150) * 120
-            },
-            'night': {
-                name: 'НОЧЬ (УЗКАЯ)',
-                bg: '#1a1a2e',
-                road: '#0f0f1e',
-                lines: '#00FF00',
-                difficulty: 3,
-                path: (y) => 340 + Math.sin(y / 350) * 60
-            }
+        const CAR_MODELS = {
+            bmw: { name: '🏎️ BMW M4', colors: [0xff0000, 0x0000ff, 0x000000, 0xffffff] },
+            audi: { name: '🏎️ Audi RS6', colors: [0xff6b00, 0x00ff00, 0x1a1a2e, 0xff00ff] },
+            mercedes: { name: '🏎️ Mercedes AMG', colors: [0xd4af37, 0x000000, 0xffffff, 0xff1493] },
+            jeep: { name: '🚙 Jeep Wrangler', colors: [0x228b22, 0xffaa00, 0x8b4513, 0x4169e1] }
         };
 
-        class InputHandler {
-            constructor() {
-                this.keys = {};
-                this.setupListeners();
+        // === ИНИЦИАЛИЗАЦИЯ ===
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x4A90E2, 200, 3000); // Яркое голубое небо
+            scene.background = new THREE.Color(0x4A90E2); // Яркое голубое
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera.position.set(0, 1.5, 0);
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+            // Свет
+            const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            sunLight.position.set(100, 200, 50);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 4096;
+            sunLight.shadow.mapSize.height = 4096;
+            sunLight.shadow.camera.far = 1000;
+            scene.add(sunLight);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            // === ГОРЫ ПО БОКАМ ===
+            createMountains();
+
+            // === ОБЛАКА ===
+            const cloudMat = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                roughness: 0.8,
+                flatShading: true
+            });
+
+            for (let i = 0; i < 15; i++) {
+                const cloudGeom = new THREE.SphereGeometry(30 + Math.random() * 20, 4, 4);
+                const cloud = new THREE.Mesh(cloudGeom, cloudMat);
+                cloud.position.set(
+                    (Math.random() - 0.5) * 800,
+                    200 + Math.random() * 300,
+                    -1500 + i * 300
+                );
+                scene.add(cloud);
             }
 
-            setupListeners() {
-                window.addEventListener('keydown', (e) => {
-                    this.keys[e.key] = true;
+            // Небо с градиентом
+            const skyGeometry = new THREE.SphereGeometry(2000, 32, 32);
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(1, '#E0F6FF');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 256, 256);
+            const skyTexture = new THREE.CanvasTexture(canvas);
+            const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
+            const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+            scene.add(sky);
+        }
+
+        // === СОЗДАНИЕ LOW POLY ГОР ===
+        function createMountains() {
+            const colors = [
+                0xFF1493, // Ярко розовая
+                0xA020F0, // Фиолетовая
+                0x8B008B, // Тёмно фиолетовая
+                0x00FF00, // Ярко зелёная
+                0x32CD32  // Лайм зелёная
+            ];
+
+            // === ЛЕВЫЕ ГОРЫ ===
+            for (let i = 0; i < 6; i++) {
+                const color = colors[i % colors.length];
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
+                    roughness: 0.6,
+                    metalness: 0.1,
+                    flatShading: true // Low Poly эффект
                 });
-                window.addEventListener('keyup', (e) => {
-                    this.keys[e.key] = false;
+
+                // Основная пирамида
+                const pyramidGeom = new THREE.ConeGeometry(50 + i * 15, 150 + i * 40, 4); // 4 стороны = пирамида
+                const pyramid = new THREE.Mesh(pyramidGeom, material);
+                pyramid.position.set(-120 - i * 80, 50 + i * 25, -500 + i * 400);
+                pyramid.castShadow = true;
+                pyramid.receiveShadow = true;
+                scene.add(pyramid);
+
+                // Второй слой - снег на вершине
+                if (i % 2 === 0) {
+                    const snowMat = new THREE.MeshStandardMaterial({
+                        color: 0xFFFFFF,
+                        roughness: 0.4,
+                        flatShading: true
+                    });
+                    const snowGeom = new THREE.ConeGeometry(40 + i * 10, 40, 4);
+                    const snow = new THREE.Mesh(snowGeom, snowMat);
+                    snow.position.set(-120 - i * 80, 140 + i * 25, -500 + i * 400);
+                    scene.add(snow);
+                }
+            }
+
+            // === ПРАВЫЕ ГОРЫ ===
+            for (let i = 0; i < 6; i++) {
+                const color = colors[(i + 2) % colors.length];
+                const material = new THREE.MeshStandardMaterial({
+                    color: color,
+                    roughness: 0.6,
+                    metalness: 0.1,
+                    flatShading: true
                 });
-                window.addEventListener('blur', () => {
-                    this.keys = {};
+
+                const pyramidGeom = new THREE.ConeGeometry(50 + i * 15, 150 + i * 40, 4);
+                const pyramid = new THREE.Mesh(pyramidGeom, material);
+                pyramid.position.set(120 + i * 80, 50 + i * 25, -500 + i * 400);
+                pyramid.castShadow = true;
+                pyramid.receiveShadow = true;
+                scene.add(pyramid);
+
+                // Снег
+                if (i % 2 === 0) {
+                    const snowMat = new THREE.MeshStandardMaterial({
+                        color: 0xFFFFFF,
+                        roughness: 0.4,
+                        flatShading: true
+                    });
+                    const snowGeom = new THREE.ConeGeometry(40 + i * 10, 40, 4);
+                    const snow = new THREE.Mesh(snowGeom, snowMat);
+                    snow.position.set(120 + i * 80, 140 + i * 25, -500 + i * 400);
+                    scene.add(snow);
+                }
+            }
+
+            // === ЗЕЛЁНЫЕ ХОЛМЫ В ЗЕМЛЕ ===
+            for (let i = 0; i < 8; i++) {
+                const hillMat = new THREE.MeshStandardMaterial({
+                    color: i % 2 === 0 ? 0x00FF00 : 0x32CD32,
+                    roughness: 0.7,
+                    flatShading: true
                 });
-                window.addEventListener('focus', () => {
-                    this.keys = {};
-                });
-            }
-
-            isPressed(key) {
-                return this.keys[key] || false;
-            }
-
-            getMovement() {
-                let movement = 0;
-                if (this.isPressed('ArrowLeft')) movement -= 1;
-                if (this.isPressed('ArrowRight')) movement += 1;
-                return movement;
-            }
-
-            isDriftPressed() {
-                return this.isPressed('Shift') || this.isPressed('d') || this.isPressed('D');
-            }
-
-            isPausePressed() {
-                return this.keys['p'] || this.keys['P'];
-            }
-
-            isSelectPressed() {
-                return this.keys['Enter'] || this.keys[' '];
-            }
-
-            isMetricsPressed() {
-                return this.keys['m'] || this.keys['M'];
-            }
-
-            isShopPressed() {
-                return this.keys['s'] || this.keys['S'];
+                const hillGeom = new THREE.SphereGeometry(60 + Math.random() * 40, 4, 4);
+                const hill = new THREE.Mesh(hillGeom, hillMat);
+                hill.position.set((Math.random() - 0.5) * 400, -20, -1000 + i * 300);
+                scene.add(hill);
             }
         }
 
-        class PlayerCar {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.width = CAR_WIDTH;
-                this.height = CAR_HEIGHT;
-                this.speed = 8;
-                this.maxSpeed = 8;
-                this.acceleration = 0.3;
-                this.velocity = 0;
-                this.angle = 0; // Направление машины (в градусах)
-                this.steerAngle = 0; // Угол руля
-                this.isDrifting = false;
-                this.driftTimer = 0;
-                this.boostActive = false;
-                this.boostTimer = 0;
-                this.boostSpeed = 0;
-                this.driftTrails = []; // Для эффекта дыма
+        // === ФУНКЦИЯ КРИВОЙ ДОРОГИ ===
+        function getRoadOffset(z) {
+            return Math.sin(z / 100) * 5 + Math.cos(z / 150) * 4;
+        }
+
+        // === СОЗДАНИЕ LOW POLY МАШИНЫ ===
+        function createRealisticCar(color, isEnemy = false, model = 'bmw') {
+            const group = new THREE.Group();
+
+            // Разные размеры для разных моделей
+            let bodyWidth = 1.5, bodyHeight = 1.0, bodyLength = 2.8;
+            if (model === 'jeep') {
+                bodyWidth = 1.6;
+                bodyHeight = 1.2;
+                bodyLength = 2.5;
+            } else if (model === 'mercedes') {
+                bodyWidth = 1.4;
+                bodyHeight = 0.95;
+                bodyLength = 3.0;
+            } else if (model === 'audi') {
+                bodyWidth = 1.45;
+                bodyHeight = 1.0;
+                bodyLength = 2.9;
             }
 
-            update(inputHandler, track, gameManager) {
-                let maxSpeed = this.maxSpeed;
+            // Корпус LOW POLY
+            const bodyGeom = new THREE.BoxGeometry(bodyWidth, bodyHeight, bodyLength);
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: color,
+                metalness: 0.3,
+                roughness: 0.7,
+                flatShading: true // LOW POLY эффект
+            });
+            const body = new THREE.Mesh(bodyGeom, bodyMat);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
 
-                // Бонус за дрифт
-                if (this.boostActive) {
-                    this.boostTimer++;
-                    maxSpeed += this.boostSpeed;
-                    if (this.boostTimer > 60) {
-                        this.boostActive = false;
-                        this.boostTimer = 0;
-                        this.boostSpeed = 0;
+            // Капот (масштабируется с корпусом)
+            const hoodGeom = new THREE.BoxGeometry(bodyWidth - 0.1, 0.4, bodyLength * 0.32);
+            const hood = new THREE.Mesh(hoodGeom, bodyMat);
+            hood.position.set(0, -0.2, bodyLength / 2 - 0.3);
+            hood.castShadow = true;
+            hood.receiveShadow = true;
+            group.add(hood);
+
+            // Крыша (масштабируется с корпусом)
+            const roofGeom = new THREE.BoxGeometry(bodyWidth - 0.2, 0.5, bodyLength * 0.45);
+            const roof = new THREE.Mesh(roofGeom, bodyMat);
+            roof.position.y = bodyHeight / 2 + 0.1;
+            roof.position.z = -0.2;
+            roof.castShadow = true;
+            roof.receiveShadow = true;
+            group.add(roof);
+
+            // Окна
+            const windowGeom = new THREE.BoxGeometry(1.2, 0.6, 0.15);
+            const windowMat = new THREE.MeshStandardMaterial({
+                color: 0x87CEEB,
+                metalness: 0.2,
+                roughness: 0.3,
+                transparent: true,
+                opacity: 0.6,
+                flatShading: true
+            });
+            const frontWindow = new THREE.Mesh(windowGeom, windowMat);
+            frontWindow.position.set(0, 0.3, 1.3);
+            frontWindow.receiveShadow = true;
+            group.add(frontWindow);
+
+            const rearWindow = new THREE.Mesh(windowGeom, windowMat);
+            rearWindow.position.set(0, 0.3, -1.1);
+            rearWindow.receiveShadow = true;
+            group.add(rearWindow);
+
+            // Фары - яркие кубики
+            const headlightGeom = new THREE.BoxGeometry(0.2, 0.2, 0.1);
+            const headlightMat = new THREE.MeshStandardMaterial({
+                color: 0xFFFF00,
+                emissive: 0xFFFF00,
+                flatShading: true
+            });
+            const leftHeadlight = new THREE.Mesh(headlightGeom, headlightMat);
+            leftHeadlight.position.set(-0.5, 0.2, 1.5);
+            group.add(leftHeadlight);
+
+            const rightHeadlight = new THREE.Mesh(headlightGeom, headlightMat);
+            rightHeadlight.position.set(0.5, 0.2, 1.5);
+            group.add(rightHeadlight);
+
+            // Задние фонари
+            const tailLightMat = new THREE.MeshStandardMaterial({
+                color: 0xFF0000,
+                emissive: 0xFF0000,
+                flatShading: true
+            });
+            const leftTailLight = new THREE.Mesh(headlightGeom, tailLightMat);
+            leftTailLight.position.set(-0.5, 0.2, -1.5);
+            group.add(leftTailLight);
+
+            const rightTailLight = new THREE.Mesh(headlightGeom, tailLightMat);
+            rightTailLight.position.set(0.5, 0.2, -1.5);
+            group.add(rightTailLight);
+
+            // Номерной знак
+            const plateGeom = new THREE.BoxGeometry(0.8, 0.25, 0.05);
+            const plateMat = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                flatShading: true
+            });
+            const licensePlate = new THREE.Mesh(plateGeom, plateMat);
+            licensePlate.position.set(0, -0.45, -1.6);
+            group.add(licensePlate);
+
+            return group;
+        }
+
+        // === КЛАСС МАШИНЫ ИГРОКА ===
+        class PlayerCar {
+            constructor() {
+                this.x = 0;
+                this.z = 0;
+                this.angle = 0;
+                this.velocity = 0;
+                this.maxSpeed = MAX_SPEED;
+                this.isDrifting = false;
+                this.roadWidth = 10;
+
+                this.mesh = createRealisticCar(selectedCarColor, false, selectedCarModel);
+                scene.add(this.mesh);
+            }
+
+            update(deltaTime) {
+                let steering = 0;
+                if (inputHandler['ArrowLeft']) steering = 1;
+                if (inputHandler['ArrowRight']) steering = -1;
+
+                if (inputHandler['Shift']) {
+                    this.isDrifting = true;
+                } else {
+                    this.isDrifting = false;
+                }
+
+                // Нитро
+                if (inputHandler['e'] || inputHandler['E']) {
+                    if (nitroCooldown <= 0 && !nitroActive) {
+                        nitroActive = true;
+                        nitroTimer = 3;
+                        nitroCooldown = 5;
                     }
                 }
 
-                // Ускорение вперёд
-                this.velocity = Math.min(this.velocity + this.acceleration, maxSpeed);
-                this.y += this.velocity;
-
-                const movement = inputHandler.getMovement();
-                const trackX = track.path(this.y);
-
-                // Управление рулём
-                if (!this.isDrifting) {
-                    // Обычное управление
-                    this.steerAngle = movement * 30; // Макс угол руля 30 градусов
-                    this.angle += this.steerAngle * 0.1; // Плавный поворот
-                } else {
-                    // При дрифте - скольжение
-                    this.steerAngle = movement * 50;
-                    this.angle += this.steerAngle * 0.15; // Быстрый поворот при дрифте
+                if (nitroActive) {
+                    nitroTimer -= deltaTime;
+                    if (nitroTimer <= 0) nitroActive = false;
                 }
 
-                // Движение машины в направлении где она смотрит
-                const angleRad = this.angle * Math.PI / 180;
-                const moveX = Math.sin(angleRad) * this.velocity * 0.3;
+                if (nitroCooldown > 0) nitroCooldown -= deltaTime;
+
+                let acceleration = 50;
+                if (nitroActive) acceleration = 150;
+
+                if (this.velocity < this.maxSpeed) {
+                    this.velocity += acceleration * deltaTime;
+                }
+
+                // Управление
+                if (this.isDrifting) {
+                    this.angle += steering * 1.5 * deltaTime;
+                } else {
+                    this.angle += steering * 0.8 * deltaTime;
+                }
+
+                const moveX = Math.sin(this.angle) * this.velocity * 0.5 * deltaTime;
                 this.x += moveX;
 
-                // Дрифт
-                if (inputHandler.isDriftPressed() && !this.isDrifting) {
-                    this.isDrifting = true;
-                    this.driftTimer = 0;
+                const roadHalfWidth = this.roadWidth / 2;
+                if (this.x < -roadHalfWidth) this.x = -roadHalfWidth;
+                if (this.x > roadHalfWidth) this.x = roadHalfWidth;
+
+                // Дым при дрифте
+                if (this.isDrifting && Math.random() < 0.3) {
+                    createSmoke(this.x, this.z);
                 }
 
-                if (this.isDrifting) {
-                    this.driftTimer++;
+                const roadOffset = getRoadOffset(this.z);
+                this.mesh.position.set(this.x + roadOffset, 0.7, 0);
+                this.mesh.rotation.y = this.angle;
 
-                    // Добавляем дым при дрифте
-                    this.driftTrails.push({
-                        x: this.x,
-                        y: this.y,
-                        life: 30,
-                        maxLife: 30
-                    });
+                camera.position.x = this.x + roadOffset;
+                camera.position.z = 0;
 
-                    if (!inputHandler.isDriftPressed() || this.driftTimer > 120) {
-                        this.isDrifting = false;
-                        // Активируем бонус после дрифта
-                        if (this.driftTimer > 20) {
-                            this.boostActive = true;
-                            this.boostTimer = 0;
-                            this.boostSpeed = 2;
-                            soundManager.playDriftSound();
-                            if (gameManager) gameManager.recordDrift();
-                        }
+                const lookAheadZ = 20;
+                const futureOffset = getRoadOffset(this.z + lookAheadZ);
+                const lookAtX = this.x + futureOffset + Math.sin(this.angle) * 5;
+                camera.lookAt(lookAtX, 1.5, lookAheadZ);
+
+                score += this.velocity * deltaTime;
+                document.getElementById('score').textContent = Math.floor(score);
+                document.getElementById('speed').textContent = 'Скорость: ' + Math.floor(this.velocity) + ' км/ч';
+            }
+        }
+
+        // === КЛАСС ВРАГА ===
+        class EnemyCar {
+            constructor(z, lane, isPolice = false) {
+                this.z = z;
+                this.x = lane * 4;
+                this.velocity = isPolice ? (70 + Math.random() * 40) : (60 + Math.random() * 40); // 2x БЫСТРЕЕ
+                this.isPolice = isPolice;
+                this.flashTime = 0;
+                this.targetLane = lane;
+                this.switchTimer = 0;
+
+                const carColor = isPolice ? 0xffffff : 0xff6b6b;
+                this.mesh = createRealisticCar(carColor, true);
+
+                if (isPolice) {
+                    const redGeom = new THREE.BoxGeometry(0.4, 0.3, 0.3);
+                    const redMat = new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000 });
+                    this.redLight = new THREE.Mesh(redGeom, redMat);
+                    this.redLight.position.set(-0.3, 1.2, 0);
+                    this.mesh.add(this.redLight);
+
+                    const blueGeom = new THREE.BoxGeometry(0.4, 0.3, 0.3);
+                    const blueMat = new THREE.MeshStandardMaterial({ color: 0x0000ff, emissive: 0x0000ff });
+                    this.blueLight = new THREE.Mesh(blueGeom, blueMat);
+                    this.blueLight.position.set(0.3, 1.2, 0);
+                    this.mesh.add(this.blueLight);
+                }
+
+                scene.add(this.mesh);
+            }
+
+            update(deltaTime) {
+                this.z -= this.velocity * deltaTime; // ЕДЯТ К НАМ
+                const offset = getRoadOffset(this.z);
+
+                // AI: меняют полосы чтобы перехватить
+                this.switchTimer++;
+                if (this.switchTimer > 120) {
+                    const newLane = Math.floor(Math.random() * 3) - 1;
+                    if (newLane !== this.targetLane) {
+                        this.targetLane = newLane;
                     }
+                    this.switchTimer = 0;
                 }
 
-                // Обновляем частицы дыма
-                this.driftTrails = this.driftTrails.filter(trail => {
-                    trail.life--;
-                    return trail.life > 0;
+                // Плавно движутся к целевой полосе
+                if (Math.abs(this.x - this.targetLane * 4) > 0.2) {
+                    this.x += (this.targetLane * 4 - this.x) * 0.02;
+                } else {
+                    this.x = this.targetLane * 4;
+                }
+
+                this.mesh.position.set(this.x + offset, 0.7, this.z);
+
+                if (this.isPolice) {
+                    this.flashTime += deltaTime;
+                    const flash1 = Math.sin(this.flashTime * 6) > 0.3;
+                    const flash2 = Math.sin(this.flashTime * 6 + Math.PI) > 0.3;
+                    this.redLight.material.emissive.setHex(flash1 ? 0xff0000 : 0x660000);
+                    this.redLight.visible = flash1;
+                    this.blueLight.material.emissive.setHex(flash2 ? 0x0000ff : 0x000066);
+                    this.blueLight.visible = flash2;
+                }
+            }
+
+            isOffScreen() {
+                return this.z < -50; // Враги исчезают когда уходят впереди (z < -50)
+            }
+
+            getWorldX() {
+                return this.x + getRoadOffset(this.z);
+            }
+        }
+
+        // === ДЫМ ===
+        function createSmoke(x, z) {
+            const smokeGeom = new THREE.SphereGeometry(0.3, 8, 8);
+            const smokeMat = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                transparent: true,
+                opacity: 0.5
+            });
+            const smoke = new THREE.Mesh(smokeGeom, smokeMat);
+            smoke.position.set(x + (Math.random() - 0.5) * 2, 0.5 + Math.random() * 1, (Math.random() - 0.5) * 2);
+            scene.add(smoke);
+            smokeParticles.push({
+                mesh: smoke,
+                life: 1,
+                maxLife: 1
+            });
+        }
+
+        // === СОЗДАНИЕ ДОРОГИ ===
+        function createRoad() {
+            for (let i = 0; i < 10; i++) { // 10 сегментов вместо 5 - ДОЛЬШЕ ДОРОГА
+                createRoadSegment(i * -50);
+            }
+        }
+
+        function createRoadSegment(z) {
+            const roadWidth = 20;
+            const segmentLength = 50;
+
+            // Асфальт с текстурой
+            const asphaltGeom = new THREE.PlaneGeometry(roadWidth, segmentLength);
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 100; i++) {
+                ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.3})`;
+                ctx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 20, Math.random() * 20);
+            }
+            const asphaltTexture = new THREE.CanvasTexture(canvas);
+            asphaltTexture.repeat.set(4, 2);
+            asphaltTexture.wrapS = THREE.RepeatWrapping;
+            asphaltTexture.wrapT = THREE.RepeatWrapping;
+            const asphaltMat = new THREE.MeshStandardMaterial({
+                map: asphaltTexture,
+                roughness: 0.9
+            });
+            const roadMesh = new THREE.Mesh(asphaltGeom, asphaltMat);
+            roadMesh.rotation.x = -Math.PI / 2;
+            const offset = getRoadOffset(z);
+            roadMesh.position.set(offset, 0, z);
+            roadMesh.receiveShadow = true;
+            scene.add(roadMesh);
+
+            // ЖЁЛТАЯ разметка в центре
+            const lineGeometry = new THREE.PlaneGeometry(0.5, segmentLength);
+            const lineMat = new THREE.MeshStandardMaterial({ color: 0xffff00 });
+            const lineMesh = new THREE.Mesh(lineGeometry, lineMat);
+            lineMesh.rotation.x = -Math.PI / 2;
+            lineMesh.position.set(offset, 0.01, z);
+            scene.add(lineMesh);
+
+            // БЕЛЫЕ границы дороги (слева)
+            const leftLineGeom = new THREE.PlaneGeometry(0.3, segmentLength);
+            const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const leftLine = new THREE.Mesh(leftLineGeom, whiteMat);
+            leftLine.rotation.x = -Math.PI / 2;
+            leftLine.position.set(-roadWidth / 2 + offset, 0.02, z);
+            scene.add(leftLine);
+
+            // БЕЛЫЕ границы дороги (справа)
+            const rightLine = new THREE.Mesh(leftLineGeom, whiteMat);
+            rightLine.rotation.x = -Math.PI / 2;
+            rightLine.position.set(roadWidth / 2 + offset, 0.02, z);
+            scene.add(rightLine);
+
+            // Бордюры (розовые)
+            const borderGeom = new THREE.BoxGeometry(0.5, 0.8, segmentLength);
+            const borderMat = new THREE.MeshStandardMaterial({ color: 0xff00ff });
+            const leftBorder = new THREE.Mesh(borderGeom, borderMat);
+            leftBorder.position.set(-roadWidth / 2 - 0.25 + offset, 0.4, z);
+            leftBorder.castShadow = true;
+            scene.add(leftBorder);
+
+            const rightBorder = new THREE.Mesh(borderGeom, borderMat);
+            rightBorder.position.set(roadWidth / 2 + 0.25 + offset, 0.4, z);
+            rightBorder.castShadow = true;
+            scene.add(rightBorder);
+
+            roadSegments.push({ mesh: roadMesh, z: z });
+        }
+
+        // === ОБНОВЛЕНИЕ ДОРОГИ И ВРАГОВ ===
+        function updateRoad(deltaTime) {
+            roadSegments.forEach(segment => {
+                if (segment.z > 50) scene.remove(segment.mesh);
+            });
+            roadSegments = roadSegments.filter(s => s.z <= 50);
+
+            if (roadSegments.length < 10) {
+                const lastZ = roadSegments[roadSegments.length - 1]?.z || 0;
+                createRoadSegment(lastZ - 50);
+            }
+
+            spawnCounter++;
+            if (spawnCounter > 180) {
+                const lane = Math.floor(Math.random() * 3) - 1;
+                const isPolice = Math.random() < 0.25;
+                enemies.push(new EnemyCar(150, lane, isPolice)); // ПОЗАДИ НАС
+                spawnCounter = 0;
+            }
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].update(deltaTime);
+
+                const enemyWorldX = enemies[i].getWorldX();
+                const playerWorldX = playerCar.x + getRoadOffset(playerCar.z);
+                const dx = Math.abs(enemyWorldX - playerWorldX);
+                const dz = Math.abs(enemies[i].z - playerCar.z);
+
+                if (dx < 2 && dz < 3) {
+                    gameState = 'gameOver';
+                }
+
+                if (enemies[i].isOffScreen()) {
+                    scene.remove(enemies[i].mesh);
+                    enemies.splice(i, 1);
+                }
+            }
+
+            // Обновляем дым
+            for (let i = smokeParticles.length - 1; i >= 0; i--) {
+                smokeParticles[i].life -= deltaTime;
+                smokeParticles[i].mesh.material.opacity = (smokeParticles[i].life / smokeParticles[i].maxLife) * 0.5;
+                smokeParticles[i].mesh.position.y += deltaTime * 1;
+                if (smokeParticles[i].life <= 0) {
+                    scene.remove(smokeParticles[i].mesh);
+                    smokeParticles.splice(i, 1);
+                }
+            }
+        }
+
+        // === INPUT ===
+        function setupInput() {
+            window.addEventListener('keydown', (e) => inputHandler[e.key] = true);
+            window.addEventListener('keyup', (e) => inputHandler[e.key] = false);
+        }
+
+        // === КАМЕРА ДЛЯ ЗЕРКАЛА ===
+        let mirrorCamera = null;
+        let mirrorCanvas = null;
+
+        function initMirrorCamera() {
+            mirrorCanvas = document.getElementById('mirrorCanvas');
+            mirrorCamera = new THREE.PerspectiveCamera(
+                75,
+                mirrorCanvas.width / mirrorCanvas.height,
+                0.1,
+                5000
+            );
+        }
+
+        // === РЕНДЕРИНГ ЗЕРКАЛА ===
+        function renderMirror() {
+            if (!mirrorCamera || !mirrorCanvas) return;
+
+            const mirrorRenderer = new THREE.WebGLRenderer({
+                canvas: mirrorCanvas,
+                antialias: false,
+                alpha: true
+            });
+            mirrorRenderer.setSize(150, 100);
+
+            // Камера смотрит назад (на 180 градусов)
+            const roadOffset = getRoadOffset(playerCar.z);
+            mirrorCamera.position.x = playerCar.x + roadOffset;
+            mirrorCamera.position.y = 1.5;
+            mirrorCamera.position.z = 0;
+
+            // Смотрит назад
+            mirrorCamera.lookAt(
+                playerCar.x + roadOffset,
+                1.5,
+                50 // Смотрит позади
+            );
+
+            mirrorRenderer.render(scene, mirrorCamera);
+        }
+
+        // === РИСОВАНИЕ РУЛЯ ===
+        function drawSteeringWheel(angle) {
+            const canvas = document.getElementById('wheelCanvas');
+            const ctx = canvas.getContext('2d');
+            const radius = 50;
+            const centerX = radius;
+            const centerY = radius;
+
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+
+            // Руль поворачивается до 90 градусов в зависимости от угла машины
+            const wheelRotation = Math.max(-90, Math.min(90, angle * 2)); // Макс 90 градусов
+            ctx.rotate(wheelRotation * Math.PI / 180);
+
+            // Круг руля
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius - 5, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Спицы руля (12 спиц)
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 12; i++) {
+                const a = (Math.PI * 2 / 12) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(a) * (radius - 10), Math.sin(a) * (radius - 10));
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Центр (не вращается)
+            ctx.fillStyle = '#00ff00';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Текст "Wheel"
+            ctx.fillStyle = '#00ff00';
+            ctx.font = 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('WHEEL', centerX, centerY + radius + 15);
+        }
+
+        // === GAME LOOP ===
+        let lastTime = Date.now();
+        function gameLoop() {
+            const now = Date.now();
+            const deltaTime = (now - lastTime) / 1000;
+            lastTime = now;
+
+            if (gameState === 'playing') {
+                playerCar.update(deltaTime);
+                updateRoad(deltaTime);
+                drawSteeringWheel(playerCar.angle);
+                renderMirror();
+            } else if (gameState === 'gameOver') {
+                document.getElementById('hud').style.display = 'none';
+                document.getElementById('finalScore').textContent = Math.floor(score);
+                document.getElementById('gameOverScreen').style.display = 'flex';
+            }
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(gameLoop);
+        }
+
+        // === ВЫБОР МАШИН ===
+        function showCarSelect() {
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('carSelectScreen').style.display = 'flex';
+            renderCarModels();
+        }
+
+        function showMenu() {
+            document.getElementById('menu').style.display = 'flex';
+            document.getElementById('carSelectScreen').style.display = 'none';
+        }
+
+        function renderCarModels() {
+            const container = document.getElementById('carModels');
+            container.innerHTML = '';
+
+            Object.entries(CAR_MODELS).forEach(([modelKey, modelData]) => {
+                const carDiv = document.createElement('div');
+                carDiv.className = `car-model ${modelKey === selectedCarModel ? 'selected' : ''}`;
+                carDiv.onclick = () => selectModel(modelKey);
+
+                let colorHTML = '<div class="color-options">';
+                modelData.colors.forEach((color, idx) => {
+                    const colorHex = '#' + color.toString(16).padStart(6, '0');
+                    const isSelected = selectedCarModel === modelKey && selectedCarColor === color;
+                    colorHTML += `<div class="color-btn ${isSelected ? 'selected' : ''}" style="background: ${colorHex};" onclick="event.stopPropagation(); selectColor('${modelKey}', ${color})"></div>`;
                 });
+                colorHTML += '</div>';
 
-                // Границы дороги
-                const roadWidth = 160;
-                const minX = trackX - roadWidth;
-                const maxX = trackX + roadWidth;
+                carDiv.innerHTML = `<h2>${modelData.name}</h2><p>${modelKey.toUpperCase()}</p>${colorHTML}`;
+                container.appendChild(carDiv);
+            });
 
-                if (this.x < minX) this.x = minX;
-                if (this.x + this.width > maxX) this.x = maxX - this.width;
-            }
+            updateStartButton();
+        }
 
-            finish() {
-                return this.y >= TRACK_LENGTH;
-            }
+        function selectModel(model) {
+            selectedCarModel = model;
+            selectedCarColor = CAR_MODELS[model].colors[0];
+            renderCarModels();
+        }
 
-            render(ctx, cameraOffset, track, skinColor) {
-                const screenY = this.y - cameraOffset;
-                const trackX = track.path(this.y);
-                const carColor = this.boostActive ? '#FFFF00' : (skinColor || '#FF6B6B');
+        function selectColor(model, color) {
+            selectedCarModel = model;
+            selectedCarColor = color;
+            renderCarModels();
+        }
 
-                // Рисуем дым при дрифте
-                for (let trail of this.driftTrails) {
-                    const trailScreenY = trail.y - cameraOffset;
-                    const alpha = trail.life / trail.maxLife;
-                    ctx.fillStyle = `rgba(100, 100, 100, ${0.4 * alpha})`;
-                    ctx.beginPath();
-                    ctx.arc(trail.x, trailScreenY, 15 + (trail.maxLife - trail.life) * 0.5, 0, Math.PI * 2);
-                    ctx.fill();
-                }
+        function updateStartButton() {
+            const btn = document.getElementById('startBtn');
+            btn.disabled = false;
+        }
 
-                ctx.save();
-                ctx.translate(this.x + this.width / 2, screenY + this.height / 2);
-                ctx.rotate(this.angle * Math.PI / 180); // Машина повёрнута на угол куда едит
+        function saveCarSelection() {
+            localStorage.setItem('selectedCarModel', selectedCarModel);
+            localStorage.setItem('selectedCarColor', selectedCarColor);
+        }
 
-                // Свечение при бонусе
-                if (this.boostActive) {
-                    ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, this.width + 15, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                // Корпус машины (теперь правильно ориентирован)
-                ctx.fillStyle = carColor;
-                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
-
-                // Окна
-                ctx.fillStyle = '#87CEEB';
-                ctx.fillRect(-12, -25, 24, 12);
-                ctx.fillRect(-12, 10, 24, 12);
-
-                // Бамперы
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(-18, -28, 36, 3);
-                ctx.fillRect(-18, 25, 36, 3);
-
-                // При дрифте - рисуем эффект скольжения
-                if (this.isDrifting) {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-                    ctx.fillRect(-this.width / 2 - 10, -this.height / 2 - 5, 10, this.height + 10);
-                    ctx.fillRect(this.width / 2, -this.height / 2 - 5, 10, this.height + 10);
-                }
-
-                ctx.restore();
+        function loadCarSelection() {
+            const saved = localStorage.getItem('selectedCarModel');
+            const savedColor = localStorage.getItem('selectedCarColor');
+            if (saved && CAR_MODELS[saved]) {
+                selectedCarModel = saved;
+                selectedCarColor = parseInt(savedColor) || CAR_MODELS[saved].colors[0];
             }
         }
 
-        class BotCar {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.width = CAR_WIDTH;
-                this.height = CAR_HEIGHT;
-                this.speed = 5.5;
-                this.acceleration = 0.18;
-                this.velocity = 0;
-                this.aiTimer = 0;
-                this.aiDirection = 0;
-                this.aiChangeInterval = Math.random() * 60 + 40;
-                this.finished = false;
-            }
-
-            update(track) {
-                this.velocity = Math.min(this.velocity + this.acceleration, this.speed);
-                this.y += this.velocity;
-
-                this.aiTimer++;
-                if (this.aiTimer > this.aiChangeInterval) {
-                    this.aiDirection = Math.random() > 0.5 ? 1 : -1;
-                    this.aiTimer = 0;
-                    this.aiChangeInterval = Math.random() * 60 + 40;
-                }
-
-                const trackX = track.path(this.y);
-                const roadWidth = 160;
-                const minX = trackX - roadWidth;
-                const maxX = trackX + roadWidth;
-
-                this.x += this.aiDirection * 3;
-
-                if (this.x < minX) this.x = minX;
-                if (this.x + this.width > maxX) this.x = maxX - this.width;
-            }
-
-            finish() {
-                return this.y >= TRACK_LENGTH;
-            }
-
-            render(ctx, cameraOffset) {
-                const screenY = this.y - cameraOffset;
-
-                // Корпус
-                ctx.fillStyle = '#4ECDC4';
-                ctx.fillRect(this.x, screenY, this.width, this.height);
-
-                // Окна
-                ctx.fillStyle = '#87CEEB';
-                ctx.fillRect(this.x + 5, screenY + 8, 30, 12);
-            }
-        }
-
-        class TrackManager {
-            constructor(trackKey) {
-                this.track = TRACKS[trackKey] || TRACKS['desert1'];
-                this.roadWidth = 320;
-            }
-
-            render(ctx, cameraOffset) {
-                const track = this.track;
-
-                // Фон
-                ctx.fillStyle = track.bg;
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-                // Горы/здания на фоне
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-                for (let i = 0; i < 10; i++) {
-                    ctx.fillRect(30 + i * 120, 50, 100, 100);
-                }
-                ctx.fillRect(CANVAS_WIDTH - 130, 50, 100, 100);
-                for (let i = 0; i < 10; i++) {
-                    ctx.fillRect(CANVAS_WIDTH - 30 - i * 120, 50, 100, 100);
-                }
-
-                // Дорога (кривая)
-                ctx.fillStyle = track.road;
-                for (let screenY = -50; screenY < CANVAS_HEIGHT + 50; screenY += 10) {
-                    const trackY = screenY + cameraOffset;
-                    const pathX = track.path(trackY);
-                    ctx.fillRect(pathX - this.roadWidth / 2, screenY, this.roadWidth, 11);
-                }
-
-                // Разметка
-                ctx.strokeStyle = track.lines;
-                ctx.lineWidth = 2;
-                for (let screenY = -50; screenY < CANVAS_HEIGHT; screenY += 30) {
-                    const trackY = screenY + cameraOffset;
-                    const pathX = track.path(trackY);
-                    ctx.beginPath();
-                    ctx.moveTo(pathX - 2, screenY);
-                    ctx.lineTo(pathX + 2, screenY + 20);
-                    ctx.stroke();
-                }
-
-                // Облака
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-                for (let i = 0; i < 5; i++) {
-                    const cloudY = 40 + (cameraOffset / 10 + i * 80) % 200;
-                    ctx.fillRect(50 + i * 250, cloudY, 100, 30);
-                }
-            }
-        }
-
-        class UIManager {
-            static drawTrackSelect(ctx, tracks, selectedIndex) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 60px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('ВЫБОР ТРАССЫ', CANVAS_WIDTH / 2, 100);
-
-                const trackKeys = Object.keys(TRACKS);
-                const itemsPerRow = 2;
-                const startIndex = Math.floor(selectedIndex / itemsPerRow) * itemsPerRow;
-
-                for (let i = 0; i < Math.min(4, trackKeys.length - startIndex); i++) {
-                    const trackKey = trackKeys[startIndex + i];
-                    const track = TRACKS[trackKey];
-                    const col = i % itemsPerRow;
-                    const row = Math.floor(i / itemsPerRow);
-
-                    const x = 200 + col * 400;
-                    const y = 200 + row * 200;
-                    const w = 350;
-                    const h = 150;
-
-                    const isSelected = selectedIndex === startIndex + i;
-                    ctx.fillStyle = isSelected ? '#FFD700' : '#666666';
-                    ctx.fillRect(x, y, w, h);
-
-                    ctx.strokeStyle = isSelected ? '#FFFF00' : '#FFFFFF';
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x, y, w, h);
-
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = 'bold 22px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(track.name, x + w / 2, y + 50);
-                    ctx.font = '16px Arial';
-                    ctx.fillText(`Сложность: ${'★'.repeat(track.difficulty)}`, x + w / 2, y + 90);
-                }
-
-                ctx.fillStyle = '#CCCCCC';
-                ctx.font = '16px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('← Стрелки → для выбора | Space/Enter для начала', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
-            }
-
-            static drawMenu(ctx, dailyQuest) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 72px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('ГОНОЧНАЯ ИГРА', CANVAS_WIDTH / 2, 80);
-
-                ctx.font = '18px Arial';
-                ctx.fillStyle = '#CCCCCC';
-                ctx.fillText('Расширенная версия (ПЛАН B)', CANVAS_WIDTH / 2, 130);
-
-                // ЕЖЕДНЕВНЫЙ КВЕСТ
-                if (dailyQuest) {
-                    ctx.fillStyle = dailyQuest.completed ? '#90EE90' : '#FFD700';
-                    ctx.fillRect(20, 160, 300, 80);
-                    ctx.strokeStyle = '#FFFFFF';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(20, 160, 300, 80);
-                    ctx.fillStyle = '#000000';
-                    ctx.font = 'bold 16px Arial';
-                    ctx.textAlign = 'left';
-                    if (dailyQuest.completed) {
-                        ctx.fillText('✅ КВЕСТ ВЫПОЛНЕН', 35, 185);
-                        ctx.fillText('Награда: +200 рейтинга', 35, 210);
-                    } else {
-                        ctx.fillText('📋 ЕЖЕДНЕВНЫЙ КВЕСТ', 35, 185);
-                        ctx.fillText(`Выиграй 1 гонку (${dailyQuest.current}/1)`, 35, 210);
-                    }
-                    ctx.textAlign = 'center';
-                }
-
-                // Большая кнопка НАЧАТЬ
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 280, 300, 80);
-                ctx.strokeStyle = '#FFFF00';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 280, 300, 80);
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 48px Arial';
-                ctx.fillText('НАЧАТЬ', CANVAS_WIDTH / 2, 338);
-
-                ctx.font = '18px Arial';
-                ctx.fillStyle = '#90EE90';
-                ctx.fillText('Управление:', CANVAS_WIDTH / 2, 420);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '15px Arial';
-                ctx.fillText('← → Стрелки - Влево/Вправо', CANVAS_WIDTH / 2, 455);
-                ctx.fillText('Shift или D - Дрифт', CANVAS_WIDTH / 2, 480);
-                ctx.fillText('P - Пауза | S - Магазин', CANVAS_WIDTH / 2, 505);
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = '20px Arial';
-                ctx.fillText('➜ Нажми ENTER чтобы начать! ➜', CANVAS_WIDTH / 2, 560);
-
-                ctx.fillStyle = '#90EE90';
-                ctx.font = '14px Arial';
-                ctx.fillText('Цель: Обогнать ботов и финишировать первым!', CANVAS_WIDTH / 2, 610);
-            }
-
-            static drawHUD(ctx, playerY, botY, trackName, level, levelProgress) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(0, 0, 400, 140);
-
-                // Уровень
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 18px Arial';
-                ctx.textAlign = 'left';
-                ctx.fillText('Уровень ' + level, 20, 30);
-
-                // Полоса прогресса
-                ctx.fillStyle = '#333333';
-                ctx.fillRect(20, 38, 200, 12);
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(20, 38, (200 * levelProgress) / 100, 12);
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(20, 38, 200, 12);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '10px Arial';
-                ctx.fillText(Math.round(levelProgress) + '%', 230, 47);
-
-                ctx.fillStyle = '#FF6B6B';
-                ctx.font = 'bold 12px Arial';
-                ctx.fillText('Вы: ' + Math.floor(playerY), 20, 70);
-
-                ctx.fillStyle = '#4ECDC4';
-                ctx.fillText('Боты: ' + Math.floor(botY), 20, 90);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '11px Arial';
-                ctx.fillText('Shift/D = Дрифт, P = Пауза', 20, 110);
-            }
-
-            static drawResults(ctx, position, playerRating, levelUpMessage, questCompleted) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 60px Arial';
-                ctx.textAlign = 'center';
-
-                if (position === 1) {
-                    ctx.fillStyle = '#FFD700';
-                    ctx.fillText('ВЫ ВЫИГРАЛИ! 🥇', CANVAS_WIDTH / 2, 120);
-                } else if (position === 2) {
-                    ctx.fillStyle = '#C0C0C0';
-                    ctx.fillText('ВТОРОЕ МЕСТО 🥈', CANVAS_WIDTH / 2, 120);
-                } else {
-                    ctx.fillStyle = '#CD7F32';
-                    ctx.fillText('ТРЕТЬЕ МЕСТО 🥉', CANVAS_WIDTH / 2, 120);
-                }
-
-                // LEVEL UP MESSAGE
-                if (levelUpMessage) {
-                    ctx.fillStyle = '#FFD700';
-                    ctx.font = 'bold 48px Arial';
-                    ctx.fillText(levelUpMessage, CANVAS_WIDTH / 2, 190);
-                }
-
-                // QUEST COMPLETED MESSAGE
-                if (questCompleted) {
-                    ctx.fillStyle = '#90EE90';
-                    ctx.font = 'bold 44px Arial';
-                    ctx.fillText('✅ КВЕСТ ВЫПОЛНЕН!', CANVAS_WIDTH / 2, 240);
-                    ctx.font = 'bold 32px Arial';
-                    ctx.fillText('+200 БОНУСА', CANVAS_WIDTH / 2, 280);
-                }
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '32px Arial';
-                ctx.fillText(`Позиция: ${position}`, CANVAS_WIDTH / 2, 330);
-
-                const ratingIncrease = position === 1 ? 50 : position === 2 ? 25 : 10;
-                ctx.font = 'bold 40px Arial';
-                ctx.fillStyle = '#90EE90';
-                ctx.fillText(`+${ratingIncrease} рейтинга`, CANVAS_WIDTH / 2, 400);
-
-                ctx.font = '24px Arial';
-                ctx.fillStyle = '#FFD700';
-                ctx.fillText(`Ваш рейтинг: ${playerRating}`, CANVAS_WIDTH / 2, 450);
-
-                ctx.fillStyle = '#4ECDC4';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 130, 520, 260, 60);
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, 520, 260, 60);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 24px Arial';
-                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, 558);
-            }
-
-            static drawShop(ctx, playerRating, ownedSkins, selectedSkin) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 48px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('ГАРАЖ', CANVAS_WIDTH / 2, 60);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '20px Arial';
-                ctx.fillText(`Ваш рейтинг: ${playerRating}`, CANVAS_WIDTH / 2, 100);
-
-                const skins = [
-                    { name: 'Красная', color: '#FF6B6B', price: 200, key: 'red' },
-                    { name: 'Синяя', color: '#4ECDC4', price: 400, key: 'blue' },
-                    { name: 'Жёлтая', color: '#FFD700', price: 600, key: 'yellow' }
-                ];
-
-                for (let i = 0; i < skins.length; i++) {
-                    const skin = skins[i];
-                    const x = 150 + i * 330;
-                    const y = 200;
-
-                    // Рамка
-                    const owned = ownedSkins.includes(skin.key);
-                    ctx.strokeStyle = owned && selectedSkin === skin.key ? '#00FF00' : owned ? '#FFFFFF' : '#666666';
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x - 50, y - 50, 200, 200);
-
-                    // Машина (прямоугольник с цветом)
-                    ctx.fillStyle = skin.color;
-                    ctx.fillRect(x - 30, y - 30, 60, 50);
-                    ctx.fillStyle = '#87CEEB';
-                    ctx.fillRect(x - 20, y - 20, 40, 15);
-
-                    // Название
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = 'bold 18px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(skin.name, x + 50, y + 80);
-
-                    // Цена или "КУПЛЕНО"
-                    if (owned) {
-                        ctx.fillStyle = '#90EE90';
-                        ctx.font = 'bold 16px Arial';
-                        ctx.fillText('✅ КУПЛЕНО', x + 50, y + 110);
-                        if (selectedSkin === skin.key) {
-                            ctx.fillText('(АКТИВНО)', x + 50, y + 135);
-                        }
-                    } else {
-                        ctx.fillStyle = '#FFD700';
-                        ctx.font = 'bold 16px Arial';
-                        ctx.fillText(`${skin.price} рейтинга`, x + 50, y + 110);
-                    }
-                }
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Нажми на скин чтобы купить/активировать', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
-
-                ctx.fillStyle = '#4ECDC4';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 20px Arial';
-                ctx.fillText('Space - Закрыть', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
-            }
-
-            static drawLeaderboard(ctx, players) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 48px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('ЛИДЕРБОРД', CANVAS_WIDTH / 2, 60);
-
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 20px Arial';
-                for (let i = 0; i < Math.min(10, players.length); i++) {
-                    const player = players[i];
-                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-                    const y = 120 + i * 45;
-
-                    ctx.fillStyle = i < 3 ? '#FFD700' : '#FFFFFF';
-                    ctx.fillText(`${medal} ${player.name}: ${player.rating}`, CANVAS_WIDTH / 2, y);
-                }
-
-                ctx.fillStyle = '#4ECDC4';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 130, CANVAS_HEIGHT - 80, 260, 60);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 20px Arial';
-                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50);
-            }
-
-            static drawPause(ctx) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-                ctx.fillStyle = '#FFD700';
-                ctx.font = 'bold 80px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('ПАУЗА', CANVAS_WIDTH / 2, 150);
-
-                ctx.fillStyle = '#4ECDC4';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 280, 300, 70);
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 280, 300, 70);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = 'bold 28px Arial';
-                ctx.fillText('P - Продолжить', CANVAS_WIDTH / 2, 328);
-
-                ctx.fillStyle = '#FF6B6B';
-                ctx.fillRect(CANVAS_WIDTH / 2 - 150, 390, 300, 70);
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(CANVAS_WIDTH / 2 - 150, 390, 300, 70);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillText('Space - Меню', CANVAS_WIDTH / 2, 438);
-            }
-        }
-
-        class GameManager {
-            constructor(canvas) {
-                this.canvas = canvas;
-                this.ctx = canvas.getContext('2d');
-                this.state = 'menu';
-                this.selectedTrack = 0;
-                this.trackKeys = Object.keys(TRACKS);
-                this.inputHandler = new InputHandler();
-                this.selectPressed = false;
-                this.trackSelectPressed = false;
-                this.playerName = this.loadPlayerName();
-                this.playerRating = this.loadPlayerRating();
-                this.ownedSkins = this.loadOwnedSkins();
-                this.selectedSkin = this.loadSelectedSkin();
-            }
-
-            loadPlayerName() {
-                const saved = localStorage.getItem('playerName');
-                return saved || 'Игрок';
-            }
-
-            savePlayerName(name) {
-                localStorage.setItem('playerName', name);
-                this.playerName = name;
-            }
-
-            loadPlayerRating() {
-                return parseInt(localStorage.getItem('playerRating') || '1000', 10);
-            }
-
-            savePlayerRating(rating) {
-                localStorage.setItem('playerRating', Math.max(0, rating));
-                this.playerRating = rating;
-            }
-
-            getLeaderboard() {
-                const saved = localStorage.getItem('leaderboard');
-                const base = saved ? JSON.parse(saved) : [];
-                const filtered = base.filter(p => p && p.name && typeof p.rating === 'number');
-                return filtered.sort((a, b) => b.rating - a.rating).slice(0, 10);
-            }
-
-            saveToLeaderboard() {
-                const lb = this.getLeaderboard();
-                const exists = lb.find(p => p.name === this.playerName);
-                if (exists) {
-                    exists.rating = this.playerRating;
-                } else {
-                    lb.push({ name: this.playerName, rating: this.playerRating });
-                }
-                localStorage.setItem('leaderboard', JSON.stringify(lb.sort((a, b) => b.rating - a.rating).slice(0, 100)));
-            }
-
-            // ========== LEVEL SYSTEM ==========
-            getLevel() {
-                const baseLevels = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250];
-                for (let i = 0; i < baseLevels.length - 1; i++) {
-                    if (this.playerRating >= baseLevels[i] && this.playerRating < baseLevels[i + 1]) {
-                        return i + 1;
-                    }
-                }
-                return Math.min(50, Math.floor(this.playerRating / 500) + 1);
-            }
-
-            getLevelProgress() {
-                const baseLevels = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250];
-                const currentLevel = this.getLevel();
-                if (currentLevel >= baseLevels.length) {
-                    return 100;
-                }
-                const levelStart = baseLevels[currentLevel - 1];
-                const levelEnd = baseLevels[currentLevel];
-                const progress = ((this.playerRating - levelStart) / (levelEnd - levelStart)) * 100;
-                return Math.min(100, Math.max(0, progress));
-            }
-
-            // ========== ANALYTICS ==========
-            initAnalytics() {
-                const now = new Date();
-                const today = Math.floor(now.getTime() / 86400000);
-                const analytics = {
-                    playerId: this.playerName + '_' + Math.random().toString(36).substr(2, 9),
-                    firstLaunchDate: today,
-                    lastLaunchDate: today,
-                    totalSessions: 1,
-                    totalRaces: 0,
-                    successfulDrifts: 0,
-                    totalPlayTime: 0,
-                    sessionStartTime: now.getTime()
-                };
-                localStorage.setItem('analytics', JSON.stringify(analytics));
-                return analytics;
-            }
-
-            getAnalytics() {
-                const saved = localStorage.getItem('analytics');
-                if (!saved) return this.initAnalytics();
-                return JSON.parse(saved);
-            }
-
-            updateAnalytics() {
-                const analytics = this.getAnalytics();
-                const now = new Date();
-                const today = Math.floor(now.getTime() / 86400000);
-
-                if (analytics.lastLaunchDate !== today) {
-                    analytics.totalSessions++;
-                    analytics.lastLaunchDate = today;
-                }
-
-                localStorage.setItem('analytics', JSON.stringify(analytics));
-            }
-
-            recordRace() {
-                const analytics = this.getAnalytics();
-                analytics.totalRaces++;
-                localStorage.setItem('analytics', JSON.stringify(analytics));
-            }
-
-            recordDrift() {
-                const analytics = this.getAnalytics();
-                analytics.successfulDrifts++;
-                localStorage.setItem('analytics', JSON.stringify(analytics));
-            }
-
-            exportAnalytics() {
-                const analytics = this.getAnalytics();
-                const leaderboard = this.getLeaderboard();
-                const data = {
-                    analytics: analytics,
-                    playerRating: this.playerRating,
-                    leaderboard: leaderboard,
-                    exportDate: new Date().toISOString()
-                };
-                return JSON.stringify(data, null, 2);
-            }
-
-            // ========== SHOP SYSTEM ==========
-            loadOwnedSkins() {
-                const saved = localStorage.getItem('ownedSkins');
-                if (!saved) {
-                    // По умолчанию красная машина есть
-                    localStorage.setItem('ownedSkins', JSON.stringify(['red']));
-                    return ['red'];
-                }
-                return JSON.parse(saved);
-            }
-
-            loadSelectedSkin() {
-                return localStorage.getItem('selectedSkin') || 'red';
-            }
-
-            saveSelectedSkin(skin) {
-                localStorage.setItem('selectedSkin', skin);
-            }
-
-            buySkin(skinKey, price) {
-                const ownedSkins = this.loadOwnedSkins();
-                if (ownedSkins.includes(skinKey)) {
-                    this.saveSelectedSkin(skinKey);
-                    return true;
-                }
-
-                if (this.playerRating >= price) {
-                    const newRating = this.playerRating - price;
-                    this.savePlayerRating(newRating);
-                    ownedSkins.push(skinKey);
-                    localStorage.setItem('ownedSkins', JSON.stringify(ownedSkins));
-                    this.saveSelectedSkin(skinKey);
-                    soundManager.playFinishSound(); // ding sound for purchase
-                    return true;
-                }
-                return false;
-            }
-
-            getCurrentSkinColor() {
-                const skins = {
-                    'red': '#FF6B6B',
-                    'blue': '#4ECDC4',
-                    'yellow': '#FFD700'
-                };
-                const selectedSkin = this.loadSelectedSkin();
-                return skins[selectedSkin] || '#FF6B6B';
-            }
-
-            // ========== DAILY QUEST SYSTEM ==========
-            getDailyQuestData() {
-                const today = Math.floor(new Date().getTime() / 86400000);
-                const saved = localStorage.getItem('dailyQuest');
-                if (!saved) {
-                    return this.initDailyQuest(today);
-                }
-                const quest = JSON.parse(saved);
-                if (quest.date !== today) {
-                    // Новый день - новый квест
-                    return this.initDailyQuest(today);
-                }
-                return quest;
-            }
-
-            initDailyQuest(today) {
-                const quest = {
-                    date: today,
-                    type: 'winRace', // Выиграй 1 гонку
-                    target: 1,
-                    current: 0,
-                    completed: false,
-                    reward: 200
-                };
-                localStorage.setItem('dailyQuest', JSON.stringify(quest));
-                return quest;
-            }
-
-            updateDailyQuestProgress(position) {
-                const quest = this.getDailyQuestData();
-                if (quest.completed) return false;
-
-                if (quest.type === 'winRace' && position === 1) {
-                    quest.current++;
-                    if (quest.current >= quest.target) {
-                        quest.completed = true;
-                    }
-                    localStorage.setItem('dailyQuest', JSON.stringify(quest));
-                    return quest.completed;
-                }
-                return false;
-            }
-
-            completeDailyQuest() {
-                const quest = this.getDailyQuestData();
-                if (quest.completed && !quest.rewarded) {
-                    const newRating = this.playerRating + quest.reward;
-                    this.savePlayerRating(newRating);
-                    quest.rewarded = true;
-                    localStorage.setItem('dailyQuest', JSON.stringify(quest));
-                    return quest.reward;
-                }
-                return 0;
-            }
-
-            update() {
-                if (this.state === 'menu') {
-                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
-                        this.startTrackSelect();
-                        this.selectPressed = true;
-                    }
-                    if (this.inputHandler.isShopPressed() && !this.selectPressed) {
-                        this.state = 'shop';
-                        this.selectPressed = true;
-                    }
-                    if (!this.inputHandler.isSelectPressed() && !this.inputHandler.isShopPressed()) {
-                        this.selectPressed = false;
-                    }
-                } else if (this.state === 'trackSelect') {
-                    const movement = this.inputHandler.getMovement();
-                    if (movement !== 0 && !this.trackSelectPressed) {
-                        this.selectedTrack = (this.selectedTrack + movement + this.trackKeys.length) % this.trackKeys.length;
-                        this.trackSelectPressed = true;
-                    }
-                    if (movement === 0) {
-                        this.trackSelectPressed = false;
-                    }
-
-                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
-                        const trackKey = this.trackKeys[this.selectedTrack];
-                        this.startGame(trackKey);
-                        this.selectPressed = true;
-                    }
-                    if (!this.inputHandler.isSelectPressed()) {
-                        this.selectPressed = false;
-                    }
-                } else if (this.state === 'playing') {
-                    if (this.inputHandler.isPausePressed() && !this.pausePressed) {
-                        this.state = 'pause';
-                        this.pausePressed = true;
-                    }
-                    if (!this.inputHandler.isPausePressed()) {
-                        this.pausePressed = false;
-                    }
-
-                    this.playerCar.update(this.inputHandler, this.trackManager.track, this);
-                    for (let bot of this.botCars) {
-                        bot.update(this.trackManager.track);
-                    }
-
-                    let finishedCount = 0;
-                    if (!this.playerFinished && this.playerCar.finish()) {
-                        this.playerFinished = true;
-                        finishedCount++;
-                    }
-
-                    for (let i = 0; i < this.botCars.length; i++) {
-                        if (!this.botCars[i].finished && this.botCars[i].finish()) {
-                            this.botCars[i].finished = true;
-                            finishedCount++;
-                        }
-                    }
-
-                    if (finishedCount > 0) {
-                        const positions = [];
-                        if (this.playerFinished) positions.push({ type: 'player', y: this.playerCar.y });
-                        for (let i = 0; i < this.botCars.length; i++) {
-                            if (this.botCars[i].finished) {
-                                positions.push({ type: 'bot', y: this.botCars[i].y, index: i });
-                            }
-                        }
-
-                        positions.sort((a, b) => b.y - a.y);
-
-                        for (let i = 0; i < positions.length; i++) {
-                            if (positions[i].type === 'player') {
-                                this.playerPosition = i + 1;
-                                this.coinsEarned = this.playerPosition === 1 ? 1000 : (this.playerPosition === 2 ? 500 : 0);
-                            }
-                        }
-                    }
-
-                    if (this.playerFinished && this.botCars.every(bot => bot.finished)) {
-                        this.finishRace();
-                    }
-                } else if (this.state === 'pause') {
-                    if (this.inputHandler.isPausePressed() && !this.pausePressed) {
-                        this.state = 'playing';
-                        this.pausePressed = true;
-                    }
-                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
-                        this.state = 'trackSelect';
-                        this.pausePressed = false;
-                        this.selectPressed = true;
-                    }
-                    if (!this.inputHandler.isPausePressed()) {
-                        this.pausePressed = false;
-                    }
-                    if (!this.inputHandler.isSelectPressed()) {
-                        this.selectPressed = false;
-                    }
-                } else if (this.state === 'results') {
-                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
-                        this.state = 'leaderboard';
-                        this.selectPressed = true;
-                    }
-                    if (!this.inputHandler.isSelectPressed()) {
-                        this.selectPressed = false;
-                    }
-                } else if (this.state === 'leaderboard') {
-                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
-                        this.state = 'menu';
-                        this.selectPressed = true;
-                    }
-                    if (!this.inputHandler.isSelectPressed()) {
-                        this.selectPressed = false;
-                    }
-                } else if (this.state === 'shop') {
-                    if (this.inputHandler.isSelectPressed() && !this.selectPressed) {
-                        this.state = 'menu';
-                        this.selectPressed = true;
-                    }
-                    if (!this.inputHandler.isSelectPressed()) {
-                        this.selectPressed = false;
-                    }
-                }
-            }
-
-            startTrackSelect() {
-                this.state = 'trackSelect';
-                this.selectedTrack = 0;
-            }
-
-            startGame(trackKey) {
-                this.state = 'playing';
-                this.updateAnalytics();
-                this.levelBefore = this.getLevel();
-                this.trackManager = new TrackManager(trackKey);
-                this.playerCar = new PlayerCar(CANVAS_WIDTH / 2 - 50, 50);
-                this.botCars = [
-                    new BotCar(CANVAS_WIDTH / 2 - 100, 50),
-                    new BotCar(CANVAS_WIDTH / 2 + 50, 50)
-                ];
-                this.playerFinished = false;
-                this.playerPosition = 0;
-                this.pausePressed = false;
-                this.selectPressed = false;
-                this.levelUpMessage = '';
-            }
-
-            finishRace() {
-                this.state = 'results';
-                soundManager.playFinishSound();
-                this.recordRace();
-
-                const ratingIncrease = this.playerPosition === 1 ? 50 : this.playerPosition === 2 ? 25 : 10;
-                let newRating = this.playerRating + ratingIncrease;
-
-                // Проверяем квест
-                this.questCompletedThisRace = false;
-                if (this.updateDailyQuestProgress(this.playerPosition)) {
-                    // Квест завершён!
-                    const questReward = this.completeDailyQuest();
-                    newRating += questReward;
-                    this.questCompletedThisRace = true;
-                    soundManager.playFinishSound(); // extra ding for quest completion
-                }
-
-                this.savePlayerRating(newRating);
-                this.saveToLeaderboard();
-
-                const levelAfter = this.getLevel();
-                if (levelAfter > this.levelBefore) {
-                    this.levelUpMessage = `🎉 НОВЫЙ УРОВЕНЬ ${levelAfter}!`;
-                    soundManager.playFinishSound();
-                } else {
-                    this.levelUpMessage = '';
-                }
-            }
-
-            render() {
-                if (this.state === 'menu') {
-                    UIManager.drawMenu(this.ctx, this.getDailyQuestData());
-                } else if (this.state === 'trackSelect') {
-                    UIManager.drawTrackSelect(this.ctx, TRACKS, this.selectedTrack);
-                } else if (this.state === 'playing' || this.state === 'pause') {
-                    const cameraOffset = Math.max(0, this.playerCar.y - 200);
-                    this.trackManager.render(this.ctx, cameraOffset);
-                    this.botCars.forEach(bot => bot.render(this.ctx, cameraOffset));
-                    this.playerCar.render(this.ctx, cameraOffset, this.trackManager.track, this.getCurrentSkinColor());
-                    UIManager.drawHUD(this.ctx, this.playerCar.y, this.botCars[0].y, TRACKS[this.trackKeys[this.selectedTrack]].name, this.getLevel(), this.getLevelProgress());
-                    if (this.state === 'pause') {
-                        UIManager.drawPause(this.ctx);
-                    }
-                } else if (this.state === 'results') {
-                    const cameraOffset = Math.max(0, this.playerCar.y - 200);
-                    this.trackManager.render(this.ctx, cameraOffset);
-                    UIManager.drawResults(this.ctx, this.playerPosition, this.playerRating, this.levelUpMessage || '', this.questCompletedThisRace || false);
-                } else if (this.state === 'leaderboard') {
-                    UIManager.drawLeaderboard(this.ctx, this.getLeaderboard());
-                } else if (this.state === 'shop') {
-                    UIManager.drawShop(this.ctx, this.playerRating, this.ownedSkins, this.selectedSkin);
-                }
-            }
+        // === ЗАПУСК ИГРЫ ===
+        function startGameWithCar() {
+            saveCarSelection();
+            document.getElementById('carSelectScreen').style.display = 'none';
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('wheelCanvas').style.display = 'block';
+            document.getElementById('mirror').style.display = 'block';
+            initMirrorCamera();
+            gameState = 'playing';
+            score = 0;
+            playerCar.velocity = 0;
         }
 
         window.addEventListener('load', () => {
-            const canvas = document.getElementById('gameCanvas');
-            canvas.width = CANVAS_WIDTH;
-            canvas.height = CANVAS_HEIGHT;
-            const gameManager = new GameManager(canvas);
-
-            // Горячая клавиша M для экспорта метрик
-            window.addEventListener('keydown', (e) => {
-                if ((e.key === 'm' || e.key === 'M') && e.ctrlKey) {
-                    e.preventDefault();
-                    const metrics = gameManager.exportAnalytics();
-                    console.log('📊 МЕТРИКИ:', metrics);
-                    alert('Метрики скопированы в консоль (F12 → Console):\n\n' + metrics.substring(0, 200) + '...');
-                }
-            });
-
-            function gameLoop() {
-                gameManager.update();
-                gameManager.render();
-                requestAnimationFrame(gameLoop);
-            }
+            loadCarSelection();
+            initThreeJS();
+            createRoad();
+            playerCar = new PlayerCar();
+            setupInput();
             gameLoop();
-        });
 
-        // Регистрация Service Worker для offline режима
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js').then((reg) => {
-                    console.log('✅ Service Worker зарегистрирован');
-                }).catch((err) => {
-                    console.log('❌ Service Worker ошибка:', err);
-                });
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
             });
-        }
+        });
     </script>
 </body>
 </html>

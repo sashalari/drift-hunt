@@ -224,19 +224,21 @@
                 this.width = CAR_WIDTH;
                 this.height = CAR_HEIGHT;
                 this.speed = 8;
+                this.maxSpeed = 8;
                 this.acceleration = 0.3;
                 this.velocity = 0;
-                this.angle = 0;
+                this.angle = 0; // Направление машины (в градусах)
+                this.steerAngle = 0; // Угол руля
                 this.isDrifting = false;
-                this.driftAngle = 0;
                 this.driftTimer = 0;
                 this.boostActive = false;
                 this.boostTimer = 0;
                 this.boostSpeed = 0;
+                this.driftTrails = []; // Для эффекта дыма
             }
 
             update(inputHandler, track, gameManager) {
-                let maxSpeed = this.speed;
+                let maxSpeed = this.maxSpeed;
 
                 // Бонус за дрифт
                 if (this.boostActive) {
@@ -249,12 +251,30 @@
                     }
                 }
 
+                // Ускорение вперёд
                 this.velocity = Math.min(this.velocity + this.acceleration, maxSpeed);
                 this.y += this.velocity;
 
                 const movement = inputHandler.getMovement();
                 const trackX = track.path(this.y);
 
+                // Управление рулём
+                if (!this.isDrifting) {
+                    // Обычное управление
+                    this.steerAngle = movement * 30; // Макс угол руля 30 градусов
+                    this.angle += this.steerAngle * 0.1; // Плавный поворот
+                } else {
+                    // При дрифте - скольжение
+                    this.steerAngle = movement * 50;
+                    this.angle += this.steerAngle * 0.15; // Быстрый поворот при дрифте
+                }
+
+                // Движение машины в направлении где она смотрит
+                const angleRad = this.angle * Math.PI / 180;
+                const moveX = Math.sin(angleRad) * this.velocity * 0.3;
+                this.x += moveX;
+
+                // Дрифт
                 if (inputHandler.isDriftPressed() && !this.isDrifting) {
                     this.isDrifting = true;
                     this.driftTimer = 0;
@@ -262,7 +282,15 @@
 
                 if (this.isDrifting) {
                     this.driftTimer++;
-                    this.driftAngle = Math.min(this.driftAngle + movement * 3, 45);
+
+                    // Добавляем дым при дрифте
+                    this.driftTrails.push({
+                        x: this.x,
+                        y: this.y,
+                        life: 30,
+                        maxLife: 30
+                    });
+
                     if (!inputHandler.isDriftPressed() || this.driftTimer > 120) {
                         this.isDrifting = false;
                         // Активируем бонус после дрифта
@@ -273,15 +301,16 @@
                             soundManager.playDriftSound();
                             if (gameManager) gameManager.recordDrift();
                         }
-                        this.driftAngle = 0;
                     }
-                    this.x += movement * 4;
-                } else {
-                    this.x += movement * 6;
-                    this.angle = movement * 15;
                 }
 
-                // Границы дороги (мягче)
+                // Обновляем частицы дыма
+                this.driftTrails = this.driftTrails.filter(trail => {
+                    trail.life--;
+                    return trail.life > 0;
+                });
+
+                // Границы дороги
                 const roadWidth = 160;
                 const minX = trackX - roadWidth;
                 const maxX = trackX + roadWidth;
@@ -299,9 +328,19 @@
                 const trackX = track.path(this.y);
                 const carColor = this.boostActive ? '#FFFF00' : (skinColor || '#FF6B6B');
 
+                // Рисуем дым при дрифте
+                for (let trail of this.driftTrails) {
+                    const trailScreenY = trail.y - cameraOffset;
+                    const alpha = trail.life / trail.maxLife;
+                    ctx.fillStyle = `rgba(100, 100, 100, ${0.4 * alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(trail.x, trailScreenY, 15 + (trail.maxLife - trail.life) * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
                 ctx.save();
                 ctx.translate(this.x + this.width / 2, screenY + this.height / 2);
-                ctx.rotate((this.angle + this.driftAngle) * Math.PI / 180);
+                ctx.rotate(this.angle * Math.PI / 180); // Машина повёрнута на угол куда едит
 
                 // Свечение при бонусе
                 if (this.boostActive) {
@@ -311,7 +350,7 @@
                     ctx.fill();
                 }
 
-                // Корпус машины
+                // Корпус машины (теперь правильно ориентирован)
                 ctx.fillStyle = carColor;
                 ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
 
@@ -325,17 +364,14 @@
                 ctx.fillRect(-18, -28, 36, 3);
                 ctx.fillRect(-18, 25, 36, 3);
 
-                ctx.restore();
-
-                // След от дрифта
+                // При дрифте - рисуем эффект скольжения
                 if (this.isDrifting) {
-                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-                    ctx.lineWidth = 8;
-                    ctx.beginPath();
-                    ctx.moveTo(this.x, screenY);
-                    ctx.lineTo(this.x - 15, screenY + 10);
-                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.fillRect(-this.width / 2 - 10, -this.height / 2 - 5, 10, this.height + 10);
+                    ctx.fillRect(this.width / 2, -this.height / 2 - 5, 10, this.height + 10);
                 }
+
+                ctx.restore();
             }
         }
 

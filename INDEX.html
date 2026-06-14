@@ -36,6 +36,21 @@
             font-size: 32px;
             margin-top: 10px;
         }
+        #speedometer {
+            margin-top: 15px;
+            width: 150px;
+            height: 40px;
+            background: #1a1a1f;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #speedBar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff6600, #ff0000);
+            width: 0%;
+            transition: width 0.1s;
+        }
         #menu {
             position: absolute;
             top: 0;
@@ -203,6 +218,9 @@
     <div id="hud" style="display: none;">
         <div>Очки: <span id="score">0</span></div>
         <div id="speed">Скорость: 0 км/ч</div>
+        <div id="speedometer">
+            <div id="speedBar"></div>
+        </div>
     </div>
     <canvas id="wheelCanvas" style="position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; display: none;"></canvas>
     <div id="mirror" style="position: absolute; top: 20px; right: 20px; width: 150px; height: 100px; border: 3px solid #00ff00; background: #000; display: none; overflow: hidden;">
@@ -236,6 +254,65 @@
         let enemies = [], spawnCounter = 0;
         let nitroActive = false, nitroTimer = 0, nitroCooldown = 0;
         let smokeParticles = [];
+
+        // === ЗВУКИ (Web Audio API) ===
+        let audioContext = null;
+        let engineOscillator = null;
+        let engineGain = null;
+        let driftOscillator = null;
+        let driftGain = null;
+
+        function initAudio() {
+            if (audioContext) return;
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playEngineSound(speed) {
+            if (!audioContext) return;
+            if (!engineGain) {
+                engineGain = audioContext.createGain();
+                engineGain.connect(audioContext.destination);
+                engineGain.gain.value = 0.1;
+
+                engineOscillator = audioContext.createOscillator();
+                engineOscillator.type = 'triangle';
+                engineOscillator.frequency.value = 200 + (speed / MAX_SPEED) * 400;
+                engineOscillator.connect(engineGain);
+                engineOscillator.start();
+            }
+
+            engineOscillator.frequency.linearRampToValueAtTime(
+                200 + (speed / MAX_SPEED) * 400,
+                audioContext.currentTime + 0.05
+            );
+        }
+
+        function stopEngineSound() {
+            if (engineOscillator) {
+                engineOscillator.stop();
+                engineOscillator = null;
+                engineGain = null;
+            }
+        }
+
+        function playDriftSound() {
+            if (!audioContext) return;
+            if (driftOscillator) return;
+
+            driftGain = audioContext.createGain();
+            driftGain.connect(audioContext.destination);
+            driftGain.gain.value = 0.05;
+
+            driftOscillator = audioContext.createOscillator();
+            driftOscillator.type = 'sawtooth';
+            driftOscillator.frequency.value = 150;
+            driftOscillator.connect(driftGain);
+            driftOscillator.start();
+
+            driftGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
+            driftOscillator.stop(audioContext.currentTime + 0.5);
+            driftOscillator = null;
+        }
 
         // === ВЫБОР МАШИН ===
         let selectedCarModel = 'bmw';
@@ -533,6 +610,45 @@
             licensePlate.position.set(0, -0.45, -1.6);
             group.add(licensePlate);
 
+            // КОЛЁСА (4 чёрных цилиндра)
+            const wheelMat = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.9,
+                metalness: 0.2,
+                flatShading: true
+            });
+            const wheelGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 8);
+
+            // Передние колёса
+            const frontLeftWheel = new THREE.Mesh(wheelGeom, wheelMat);
+            frontLeftWheel.rotation.z = Math.PI / 2;
+            frontLeftWheel.position.set(-bodyWidth / 2 + 0.2, -0.4, bodyLength / 3);
+            frontLeftWheel.castShadow = true;
+            frontLeftWheel.receiveShadow = true;
+            group.add(frontLeftWheel);
+
+            const frontRightWheel = new THREE.Mesh(wheelGeom, wheelMat);
+            frontRightWheel.rotation.z = Math.PI / 2;
+            frontRightWheel.position.set(bodyWidth / 2 - 0.2, -0.4, bodyLength / 3);
+            frontRightWheel.castShadow = true;
+            frontRightWheel.receiveShadow = true;
+            group.add(frontRightWheel);
+
+            // Задние колёса
+            const backLeftWheel = new THREE.Mesh(wheelGeom, wheelMat);
+            backLeftWheel.rotation.z = Math.PI / 2;
+            backLeftWheel.position.set(-bodyWidth / 2 + 0.2, -0.4, -bodyLength / 3);
+            backLeftWheel.castShadow = true;
+            backLeftWheel.receiveShadow = true;
+            group.add(backLeftWheel);
+
+            const backRightWheel = new THREE.Mesh(wheelGeom, wheelMat);
+            backRightWheel.rotation.z = Math.PI / 2;
+            backRightWheel.position.set(bodyWidth / 2 - 0.2, -0.4, -bodyLength / 3);
+            backRightWheel.castShadow = true;
+            backRightWheel.receiveShadow = true;
+            group.add(backRightWheel);
+
             return group;
         }
 
@@ -546,6 +662,8 @@
                 this.maxSpeed = MAX_SPEED;
                 this.isDrifting = false;
                 this.roadWidth = 10;
+                this.velocityX = 0;
+                this.lastDriftPlay = 0;
 
                 this.mesh = createRealisticCar(selectedCarColor, false, selectedCarModel);
                 scene.add(this.mesh);
@@ -558,6 +676,10 @@
 
                 if (inputHandler['Shift']) {
                     this.isDrifting = true;
+                    if (Date.now() - this.lastDriftPlay > 200) {
+                        playDriftSound();
+                        this.lastDriftPlay = Date.now();
+                    }
                 } else {
                     this.isDrifting = false;
                 }
@@ -583,21 +705,36 @@
 
                 if (this.velocity < this.maxSpeed) {
                     this.velocity += acceleration * deltaTime;
+                } else {
+                    this.velocity -= 10 * deltaTime;
                 }
 
-                // Управление
+                // Звук двигателя
+                if (gameState === 'playing') {
+                    playEngineSound(this.velocity);
+                }
+
+                // Управление с инерцией
                 if (this.isDrifting) {
                     this.angle += steering * 1.5 * deltaTime;
                 } else {
                     this.angle += steering * 0.8 * deltaTime;
                 }
 
-                const moveX = Math.sin(this.angle) * this.velocity * 0.5 * deltaTime;
-                this.x += moveX;
+                // Плавное движение с инерцией
+                const targetX = Math.sin(this.angle) * this.velocity * 0.5 * deltaTime;
+                this.velocityX += (targetX - this.velocityX) * 0.3;
+                this.x += this.velocityX;
 
                 const roadHalfWidth = this.roadWidth / 2;
-                if (this.x < -roadHalfWidth) this.x = -roadHalfWidth;
-                if (this.x > roadHalfWidth) this.x = roadHalfWidth;
+                if (this.x < -roadHalfWidth) {
+                    this.x = -roadHalfWidth;
+                    this.velocityX = 0;
+                }
+                if (this.x > roadHalfWidth) {
+                    this.x = roadHalfWidth;
+                    this.velocityX = 0;
+                }
 
                 // Дым при дрифте
                 if (this.isDrifting && Math.random() < 0.3) {
@@ -618,6 +755,8 @@
 
                 score += this.velocity * deltaTime;
                 document.getElementById('score').textContent = Math.floor(score);
+                const speedPercent = Math.min(100, (this.velocity / this.maxSpeed) * 100);
+                document.getElementById('speedBar').style.width = speedPercent + '%';
                 document.getElementById('speed').textContent = 'Скорость: ' + Math.floor(this.velocity) + ' км/ч';
             }
         }
@@ -715,10 +854,40 @@
         }
 
         // === СОЗДАНИЕ ДОРОГИ ===
+        let grassSegments = [];
         function createRoad() {
             for (let i = 0; i < 20; i++) { // 20 сегментов - видна дорога ДАЛЕКО на горизонт
                 createRoadSegment(i * -50);
             }
+        }
+
+        // === ТРАВА ПО КРАЯМ ДОРОГИ ===
+        function createGrassSegment(z) {
+            const segmentLength = 50;
+            const roadWidth = 20;
+            const grassWidth = 15;
+
+            // ЛЕВАЯ трава
+            const grassLeftGeom = new THREE.PlaneGeometry(grassWidth, segmentLength);
+            const grassMat = new THREE.MeshStandardMaterial({
+                color: 0x2d5016, // Тёмно-зелёный
+                roughness: 0.8
+            });
+            const grassLeft = new THREE.Mesh(grassLeftGeom, grassMat);
+            grassLeft.rotation.x = -Math.PI / 2;
+            const offset = getRoadOffset(z);
+            grassLeft.position.set(-roadWidth / 2 - grassWidth / 2 + offset, -0.01, z);
+            grassLeft.receiveShadow = true;
+            scene.add(grassLeft);
+
+            // ПРАВАЯ трава
+            const grassRight = new THREE.Mesh(grassLeftGeom, grassMat);
+            grassRight.rotation.x = -Math.PI / 2;
+            grassRight.position.set(roadWidth / 2 + grassWidth / 2 + offset, -0.01, z);
+            grassRight.receiveShadow = true;
+            scene.add(grassRight);
+
+            grassSegments.push({ left: grassLeft, right: grassRight, z: z });
         }
 
         function createRoadSegment(z) {
@@ -753,13 +922,15 @@
             roadMesh.receiveShadow = true;
             scene.add(roadMesh);
 
-            // ЖЁЛТАЯ разметка в центре
-            const lineGeometry = new THREE.PlaneGeometry(0.5, segmentLength);
-            const lineMat = new THREE.MeshStandardMaterial({ color: 0xffff00 });
-            const lineMesh = new THREE.Mesh(lineGeometry, lineMat);
-            lineMesh.rotation.x = -Math.PI / 2;
-            lineMesh.position.set(offset, 0.01, z);
-            scene.add(lineMesh);
+            // БЕЛАЯ ПУНКТИРНАЯ разметка в центре
+            for (let i = 0; i < segmentLength / 5; i++) {
+                const dashGeometry = new THREE.PlaneGeometry(0.4, 2);
+                const dashMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const dash = new THREE.Mesh(dashGeometry, dashMat);
+                dash.rotation.x = -Math.PI / 2;
+                dash.position.set(offset, 0.01, z + i * 5 - segmentLength / 2);
+                scene.add(dash);
+            }
 
             // БЕЛЫЕ границы дороги (слева)
             const leftLineGeom = new THREE.PlaneGeometry(0.3, segmentLength);
@@ -798,9 +969,18 @@
             });
             roadSegments = roadSegments.filter(s => s.z <= 50);
 
+            grassSegments.forEach(segment => {
+                if (segment.z > 50) {
+                    scene.remove(segment.left);
+                    scene.remove(segment.right);
+                }
+            });
+            grassSegments = grassSegments.filter(s => s.z <= 50);
+
             if (roadSegments.length < 20) { // Поддерживаем 20 сегментов для длинной дороги
                 const lastZ = roadSegments[roadSegments.length - 1]?.z || 0;
                 createRoadSegment(lastZ - 50);
+                createGrassSegment(lastZ - 50);
             }
 
             spawnCounter++;
@@ -952,6 +1132,7 @@
                 drawSteeringWheel(playerCar.angle);
                 renderMirror();
             } else if (gameState === 'gameOver') {
+                stopEngineSound();
                 document.getElementById('hud').style.display = 'none';
                 document.getElementById('finalScore').textContent = Math.floor(score);
                 document.getElementById('gameOverScreen').style.display = 'flex';
@@ -1037,6 +1218,7 @@
             document.getElementById('wheelCanvas').style.display = 'block';
             document.getElementById('mirror').style.display = 'block';
             initMirrorCamera();
+            initAudio();
             gameState = 'playing';
             score = 0;
             playerCar.velocity = 0;
@@ -1046,6 +1228,9 @@
             loadCarSelection();
             initThreeJS();
             createRoad();
+            for (let i = 0; i < 20; i++) {
+                createGrassSegment(i * -50);
+            }
             playerCar = new PlayerCar();
             setupInput();
             gameLoop();

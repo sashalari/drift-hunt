@@ -383,11 +383,11 @@
         // === ИНИЦИАЛИЗАЦИЯ ===
         function initThreeJS() {
             scene = new THREE.Scene();
-            scene.fog = new THREE.Fog(0xD4B896, 400, 5000); // Тёплый бежевый цвет для дали
-            scene.background = new THREE.Color(0xDEB887); // Тёплое бежевое небо
+            scene.fog = new THREE.Fog(0x1a1a3e, 300, 3000); // Тёмный синий туман ночи
+            scene.background = new THREE.Color(0x0a0a1a); // Чёрное ночное небо
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 5000);
-            camera.position.set(0, 1.5, 0);
+            camera.position.set(0, 8, -5); // ВЫШЕ для третьего лица вида
 
             renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas'), antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -395,204 +395,162 @@
             renderer.shadowMap.type = THREE.PCFShadowShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-            // РЕАЛИСТИЧНОЕ ОСВЕЩЕНИЕ
-            // Солнце (жаркий свет под углом)
-            const sunLight = new THREE.DirectionalLight(0xfffacd, 1.4);
-            sunLight.position.set(150, 250, 100);
-            sunLight.castShadow = true;
-            sunLight.shadow.mapSize.width = 8192;
-            sunLight.shadow.mapSize.height = 8192;
-            sunLight.shadow.camera.far = 2000;
-            sunLight.shadow.camera.left = -500;
-            sunLight.shadow.camera.right = 500;
-            sunLight.shadow.camera.top = 500;
-            sunLight.shadow.camera.bottom = -500;
-            sunLight.shadow.bias = -0.0001;
-            scene.add(sunLight);
+            // НЕОНОВОЕ НОЧНОЕ ОСВЕЩЕНИЕ
+            // Оранжевое свечение на горизонте (городской закат)
+            const sunsetLight = new THREE.DirectionalLight(0xFF6600, 0.8);
+            sunsetLight.position.set(0, 100, -500);
+            sunsetLight.castShadow = false;
+            scene.add(sunsetLight);
 
-            // Небо (голубой свет со стороны неба)
-            const skyLight = new THREE.DirectionalLight(0x87ceeb, 0.6);
-            skyLight.position.set(-100, 200, -100);
-            scene.add(skyLight);
+            // Синий неоновый свет сверху
+            const neonTopLight = new THREE.DirectionalLight(0x00FFFF, 0.6);
+            neonTopLight.position.set(0, 200, 200);
+            scene.add(neonTopLight);
 
-            // Амбиентный свет (мягкий фоновый свет)
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            // Розовый неоновый свет
+            const neonPinkLight = new THREE.PointLight(0xFF00FF, 1);
+            neonPinkLight.position.set(100, 150, 0);
+            scene.add(neonPinkLight);
+
+            // Фиолетовый неоновый свет
+            const neonPurpleLight = new THREE.PointLight(0x9900FF, 0.8);
+            neonPurpleLight.position.set(-100, 150, 0);
+            scene.add(neonPurpleLight);
+
+            // Слабый амбиентный свет (ночь)
+            const ambientLight = new THREE.AmbientLight(0x1a3a6e, 0.4); // Тёмно-синий
             scene.add(ambientLight);
 
-            // Лёгкий точечный свет для дополнительных деталей
-            const pointLight = new THREE.PointLight(0xfff8dc, 0.5);
-            pointLight.position.set(200, 300, 200);
-            scene.add(pointLight);
+            // === ГОРОД (НЕБОСКРЁБЫ) ===
+            createBuildings();
 
-            // === ГОРЫ ПО БОКАМ ===
-            createMountains();
-
-            // === ОБЛАКА РЕАЛИСТИЧНЫЕ ===
+            // === НОЧНОЕ НЕБО - мало облаков (редкие) ===
             const cloudMat = new THREE.MeshStandardMaterial({
-                color: 0xF5F5DC, // Кремово-белый
-                roughness: 0.9,
+                color: 0x444455, // Тёмно-серое облако
+                roughness: 0.8,
                 flatShading: false,
-                emissive: 0xFFE4C4 // Мягкое свечение рассвета
+                emissive: 0x222233,
+                opacity: 0.5,
+                transparent: true
             });
 
-            for (let i = 0; i < 15; i++) {
-                // Создаём облако из нескольких сфер
+            for (let i = 0; i < 3; i++) {
+                // Редкие ночные облака
                 const cloudGroup = new THREE.Group();
-                for (let j = 0; j < 4; j++) {
-                    const cloudGeom = new THREE.SphereGeometry(30 + Math.random() * 25, 16, 16);
+                for (let j = 0; j < 2; j++) {
+                    const cloudGeom = new THREE.SphereGeometry(20 + Math.random() * 15, 12, 12);
                     const cloud = new THREE.Mesh(cloudGeom, cloudMat);
-                    cloud.position.x = (j - 1.5) * 35;
-                    cloud.castShadow = true;
+                    cloud.position.x = (j - 0.5) * 30;
                     cloud.receiveShadow = true;
                     cloudGroup.add(cloud);
                 }
                 cloudGroup.position.set(
-                    (Math.random() - 0.5) * 600,
-                    280 + Math.random() * 200,
-                    -1800 + i * 400
+                    (Math.random() - 0.5) * 800,
+                    150 + Math.random() * 100,
+                    -800 + i * 600
                 );
                 scene.add(cloudGroup);
             }
 
-            // Небо с ТЁПЛЫМ градиентом
-            const skyGeometry = new THREE.SphereGeometry(2000, 32, 32);
+            // НОЧНОЕ НЕБО с оранжевым горизонтом (синтвейв)
+            const skyGeometry = new THREE.SphereGeometry(3000, 64, 64);
             const skyCanvas = document.createElement('canvas');
-            skyCanvas.width = 256;
-            skyCanvas.height = 256;
+            skyCanvas.width = 512;
+            skyCanvas.height = 512;
             const skyCtx = skyCanvas.getContext('2d');
-            const skyGradient = skyCtx.createLinearGradient(0, 0, 0, 256);
-            // Тёплый градиент: от светлого верхнего края к более жёлтому
-            skyGradient.addColorStop(0, '#E8D4B0');   // Верх: светлый бежевый
-            skyGradient.addColorStop(0.5, '#F0D9B5'); // Средина
-            skyGradient.addColorStop(1, '#FFD9A8');   // Низ: тёплый жёлто-оранжевый
+
+            // Чёрное ночное небо
+            const skyGradient = skyCtx.createLinearGradient(0, 0, 0, 512);
+            skyGradient.addColorStop(0, '#000000');      // Верх: абсолютно чёрный
+            skyGradient.addColorStop(0.3, '#0a0a2e');    // Тёмный синий
+            skyGradient.addColorStop(0.7, '#1a0033');    // Фиолетовый
+            skyGradient.addColorStop(1, '#FF6600');      // Низ: оранжевый горизонт
+
             skyCtx.fillStyle = skyGradient;
-            skyCtx.fillRect(0, 0, 256, 256);
+            skyCtx.fillRect(0, 0, 512, 512);
+
+            // Звёзды
+            skyCtx.fillStyle = '#FFFFFF';
+            for (let i = 0; i < 100; i++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 300; // Только верхняя часть
+                const size = Math.random() * 2;
+                skyCtx.fillRect(x, y, size, size);
+            }
+
             const skyTexture = new THREE.CanvasTexture(skyCanvas);
             const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
         }
 
-        // === СОЗДАНИЕ ДЕРЕВЬЕВ И ГОР ===
-        function createMountains() {
-            // Функция для создания одного дерева
-            function createTree(x, z, scale = 1) {
+        // === СОЗДАНИЕ ГОРОДА (НЕБОСКРЁБЫ) ===
+        function createBuildings() {
+            // Функция для создания одного небоскрёба
+            function createBuilding(x, z, height, width) {
                 const group = new THREE.Group();
 
-                // СТВОЛ РЕАЛИСТИЧНЫЙ
-                const trunkMat = new THREE.MeshStandardMaterial({
-                    color: 0x654321, // Тёмно-коричневый
-                    roughness: 0.9,
-                    metalness: 0,
+                // Материал здания (тёмный серый с неоновыми огнями)
+                const buildingMat = new THREE.MeshStandardMaterial({
+                    color: 0x1a1a2e, // Тёмный серый-синий
+                    roughness: 0.8,
+                    metalness: 0.2,
                     flatShading: false
                 });
-                const trunkGeom = new THREE.CylinderGeometry(0.4 * scale, 0.6 * scale, 6 * scale, 16);
-                const trunk = new THREE.Mesh(trunkGeom, trunkMat);
-                trunk.castShadow = true;
-                trunk.receiveShadow = true;
-                group.add(trunk);
 
-                // ЛИСТЬЯ РЕАЛИСТИЧНЫЕ (2 слоя сфер вместо конусов)
-                const foliageMat = new THREE.MeshStandardMaterial({
-                    color: 0x1a4d0e, // Тёмная зелень
-                    roughness: 0.7,
-                    metalness: 0,
-                    flatShading: false
-                });
-                const foliageGeom = new THREE.SphereGeometry(2 * scale, 16, 16);
-                const foliage = new THREE.Mesh(foliageGeom, foliageMat);
-                foliage.position.y = 3 * scale;
-                foliage.castShadow = true;
-                foliage.receiveShadow = true;
-                group.add(foliage);
+                // Основной корпус здания
+                const buildingGeom = new THREE.BoxGeometry(width, height, 8);
+                const building = new THREE.Mesh(buildingGeom, buildingMat);
+                building.position.y = height / 2;
+                building.castShadow = true;
+                building.receiveShadow = true;
+                group.add(building);
 
-                // ЛИСТЬЯ (второй слой - светлее)
-                const foliage2Mat = new THREE.MeshStandardMaterial({
-                    color: 0x2d8f1f, // Светлая зелень
-                    roughness: 0.7,
-                    metalness: 0,
-                    flatShading: false
+                // Окна (неоновые огни)
+                const windowSize = width / 4;
+                const windowsMat = new THREE.MeshStandardMaterial({
+                    color: 0xFFDD00, // Жёлто-оранжевые огни
+                    emissive: 0xFFCC00,
+                    metalness: 0.9,
+                    roughness: 0.1
                 });
-                const foliage2Geom = new THREE.SphereGeometry(1.5 * scale, 16, 16);
-                const foliage2 = new THREE.Mesh(foliage2Geom, foliage2Mat);
-                foliage2.position.y = 2.5 * scale;
-                foliage2.castShadow = true;
-                foliage2.receiveShadow = true;
-                group.add(foliage2);
+
+                // Создаём сетку окон
+                for (let row = 0; row < Math.floor(height / 3); row++) {
+                    for (let col = 0; col < 3; col++) {
+                        // Случайно включаем/выключаем окна
+                        if (Math.random() > 0.2) {
+                            const windowGeom = new THREE.BoxGeometry(windowSize * 0.7, windowSize * 0.7, 0.5);
+                            const window = new THREE.Mesh(windowGeom, windowsMat);
+                            window.position.set(
+                                -width / 2 + windowSize * (col + 0.5),
+                                windowSize * row + 1,
+                                4.5
+                            );
+                            window.castShadow = true;
+                            group.add(window);
+                        }
+                    }
+                }
 
                 group.position.set(x, 0, z);
                 return group;
             }
 
-            // === ДЕРЕВЬЯ ПО ЛЕВОЙ СТОРОНЕ ДОРОГИ ===
-            for (let i = 0; i < 25; i++) {
-                const tree = createTree(-13 - Math.random() * 3, -i * 40, 0.8 + Math.random() * 0.4);
-                scene.add(tree);
+            // === НЕБОСКРЁБЫ СЛЕВА ===
+            for (let i = 0; i < 8; i++) {
+                const height = 30 + Math.random() * 50;
+                const width = 6 + Math.random() * 3;
+                const building = createBuilding(-18 - Math.random() * 5, -i * 60, height, width);
+                scene.add(building);
             }
 
-            // === ДЕРЕВЬЯ ПО ПРАВОЙ СТОРОНЕ ДОРОГИ ===
-            for (let i = 0; i < 25; i++) {
-                const tree = createTree(13 + Math.random() * 3, -i * 40, 0.8 + Math.random() * 0.4);
-                scene.add(tree);
-            }
-
-            // === ГОРЫ ВДАЛИ РЕАЛИСТИЧНЫЕ ===
-            // Белая снежная вершина
-            const snowMat = new THREE.MeshStandardMaterial({
-                color: 0xE8E8E8, // Светлый серый
-                roughness: 0.7,
-                metalness: 0,
-                flatShading: false
-            });
-
-            // Серая скала под снегом
-            const rockMat = new THREE.MeshStandardMaterial({
-                color: 0x808080,
-                roughness: 0.85,
-                metalness: 0,
-                flatShading: false
-            });
-
-            // Горы слева
-            for (let i = 0; i < 6; i++) {
-                const height = 250 + i * 150;
-                const width = 120 + i * 80;
-
-                // Вершина (снег)
-                const peakGeom = new THREE.ConeGeometry(width * 0.6, height * 0.4, 32);
-                const peak = new THREE.Mesh(peakGeom, snowMat);
-                peak.position.set(-350 - i * 200, height * 0.3, -2000 - i * 400);
-                peak.castShadow = true;
-                peak.receiveShadow = true;
-                scene.add(peak);
-
-                // База (скала)
-                const baseGeom = new THREE.ConeGeometry(width, height * 0.6, 32);
-                const base = new THREE.Mesh(baseGeom, rockMat);
-                base.position.set(-350 - i * 200, -height * 0.15, -2000 - i * 400);
-                base.castShadow = true;
-                base.receiveShadow = true;
-                scene.add(base);
-            }
-
-            // Горы справа (симметрично)
-            for (let i = 0; i < 6; i++) {
-                const height = 250 + i * 150;
-                const width = 120 + i * 80;
-
-                const peakGeom = new THREE.ConeGeometry(width * 0.6, height * 0.4, 32);
-                const peak = new THREE.Mesh(peakGeom, snowMat);
-                peak.position.set(350 + i * 200, height * 0.3, -2000 - i * 400);
-                peak.castShadow = true;
-                peak.receiveShadow = true;
-                scene.add(peak);
-
-                const baseGeom = new THREE.ConeGeometry(width, height * 0.6, 32);
-                const base = new THREE.Mesh(baseGeom, rockMat);
-                base.position.set(350 + i * 200, -height * 0.15, -2000 - i * 400);
-                base.castShadow = true;
-                base.receiveShadow = true;
-                scene.add(base);
+            // === НЕБОСКРЁБЫ СПРАВА ===
+            for (let i = 0; i < 8; i++) {
+                const height = 30 + Math.random() * 50;
+                const width = 6 + Math.random() * 3;
+                const building = createBuilding(18 + Math.random() * 5, -i * 60, height, width);
+                scene.add(building);
             }
         }
 
@@ -1033,62 +991,57 @@
         function createGrassSegment(z) {
             const segmentLength = 50;
             const roadWidth = 20;
-            const grassWidth = 15;
+            const sideWidth = 15;
 
-            // ТРАВА РЕАЛИСТИЧНАЯ с текстурой
-            const grassCanvas = document.createElement('canvas');
-            grassCanvas.width = 512;
-            grassCanvas.height = 512;
-            const gCtx = grassCanvas.getContext('2d');
+            // Боковые ТРОТУАРЫ (в городе вместо травы)
+            const sidewalkCanvas = document.createElement('canvas');
+            sidewalkCanvas.width = 512;
+            sidewalkCanvas.height = 512;
+            const swCtx = sidewalkCanvas.getContext('2d');
 
-            // Основной цвет травы
-            gCtx.fillStyle = '#1a4d0e';
-            gCtx.fillRect(0, 0, 512, 512);
+            // Тёмный бетон тротуара
+            swCtx.fillStyle = '#333333';
+            swCtx.fillRect(0, 0, 512, 512);
 
-            // Светлые пятна травы
-            for (let i = 0; i < 200; i++) {
-                gCtx.fillStyle = `rgba(45,140,30,${Math.random() * 0.5})`;
-                gCtx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 8, Math.random() * 8);
+            // Линии плиток
+            swCtx.strokeStyle = '#555555';
+            swCtx.lineWidth = 4;
+            for (let i = 0; i < 10; i++) {
+                swCtx.strokeRect(i * 51, 0, 51, 512);
             }
 
-            // Камни и земля
-            for (let i = 0; i < 100; i++) {
-                gCtx.fillStyle = `rgba(100,90,80,${Math.random() * 0.3})`;
-                gCtx.fillRect(Math.random() * 512, Math.random() * 512, Math.random() * 10, Math.random() * 10);
-            }
+            const sidewalkTexture = new THREE.CanvasTexture(sidewalkCanvas);
+            sidewalkTexture.repeat.set(4, 2);
+            sidewalkTexture.wrapS = THREE.RepeatWrapping;
+            sidewalkTexture.wrapT = THREE.RepeatWrapping;
 
-            const grassTexture = new THREE.CanvasTexture(grassCanvas);
-            grassTexture.repeat.set(4, 2);
-            grassTexture.wrapS = THREE.RepeatWrapping;
-            grassTexture.wrapT = THREE.RepeatWrapping;
-
-            const grassMat = new THREE.MeshStandardMaterial({
-                map: grassTexture,
-                color: 0x2d5016,
-                roughness: 0.9,
-                metalness: 0,
+            const sidewalkMat = new THREE.MeshStandardMaterial({
+                map: sidewalkTexture,
+                color: 0x333333,
+                roughness: 0.8,
+                metalness: 0.1,
                 flatShading: false
             });
 
-            // ЛЕВАЯ трава
-            const grassLeftGeom = new THREE.PlaneGeometry(grassWidth, segmentLength, 4, 4);
-            const grassLeft = new THREE.Mesh(grassLeftGeom, grassMat);
-            grassLeft.rotation.x = -Math.PI / 2;
+            // ЛЕВЫЙ ТРОТУАР
+            const sideLeftGeom = new THREE.PlaneGeometry(sideWidth, segmentLength, 4, 4);
+            const sideLeft = new THREE.Mesh(sideLeftGeom, sidewalkMat);
+            sideLeft.rotation.x = -Math.PI / 2;
             const offset = getRoadOffset(z);
-            grassLeft.position.set(-roadWidth / 2 - grassWidth / 2 + offset, -0.02, z);
-            grassLeft.castShadow = true;
-            grassLeft.receiveShadow = true;
-            scene.add(grassLeft);
+            sideLeft.position.set(-roadWidth / 2 - sideWidth / 2 + offset, -0.01, z);
+            sideLeft.castShadow = true;
+            sideLeft.receiveShadow = true;
+            scene.add(sideLeft);
 
-            // ПРАВАЯ трава
-            const grassRight = new THREE.Mesh(grassLeftGeom, grassMat);
-            grassRight.rotation.x = -Math.PI / 2;
-            grassRight.position.set(roadWidth / 2 + grassWidth / 2 + offset, -0.02, z);
-            grassRight.castShadow = true;
-            grassRight.receiveShadow = true;
-            scene.add(grassRight);
+            // ПРАВЫЙ ТРОТУАР
+            const sideRight = new THREE.Mesh(sideLeftGeom, sidewalkMat);
+            sideRight.rotation.x = -Math.PI / 2;
+            sideRight.position.set(roadWidth / 2 + sideWidth / 2 + offset, -0.01, z);
+            sideRight.castShadow = true;
+            sideRight.receiveShadow = true;
+            scene.add(sideRight);
 
-            grassSegments.push({ left: grassLeft, right: grassRight, z: z });
+            grassSegments.push({ left: sideLeft, right: sideRight, z: z });
         }
 
         function createRoadSegment(z) {

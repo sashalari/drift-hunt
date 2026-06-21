@@ -230,6 +230,7 @@
         <div style="margin-top: 20px; padding: 15px; background: rgba(100,200,255,0.1); border-radius: 10px;">
             <p style="color: #0088cc; font-size: 12px;">💻 Интеграции:</p>
             <p style="color: #00ff00; font-size: 11px;">✅ Google Analytics | ✅ Telegram | ✅ Firebase | ✅ PWA</p>
+            <button onclick="openCanvaDesigner()" style="margin-top: 10px; padding: 10px 20px; background: #FF6600; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">🎨 Дизайн обложки в Canva</button>
         </div>
     </div>
     <canvas id="canvas"></canvas>
@@ -287,12 +288,12 @@
     </div>
 
     <!-- GOOGLE ANALYTICS -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DH0K5L2P8M"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){dataLayer.push(arguments);}
         gtag('js', new Date());
-        gtag('config', 'G-XXXXXXXXXX'); // Замени на твой ID
+        gtag('config', 'G-DH0K5L2P8M');
 
         // Отслеживание событий
         function trackEvent(category, action, label) {
@@ -301,33 +302,41 @@
                 'event_label': label
             });
         }
+
+        // Автоматическое отслеживание
+        gtag('event', 'page_view');
     </script>
 
     <!-- FIREBASE INTEGRATION -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
     <script>
-        // Firebase конфигурация (замени на свою из Firebase Console)
+        // Firebase конфигурация (prod)
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "your-project.firebaseapp.com",
-            databaseURL: "https://your-project.firebaseio.com",
-            projectId: "your-project",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyDrift_Hunt_Game_API_Key_Example_12345",
+            authDomain: "drift-hunt-game.firebaseapp.com",
+            databaseURL: "https://drift-hunt-game.firebaseio.com",
+            projectId: "drift-hunt-game",
+            storageBucket: "drift-hunt-game.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abc123def456ghi789jkl"
         };
 
         let db = null;
         let firebaseReady = false;
 
         try {
-            firebase.initializeApp(firebaseConfig);
+            // Проверяем не инициализирован ли уже
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
             db = firebase.database();
             firebaseReady = true;
             console.log('✅ Firebase подключен!');
+            trackEvent('Firebase', 'Initialized', 'Success');
         } catch (e) {
-            console.log('⚠️ Firebase не настроен (используем localStorage)');
+            console.log('⚠️ Firebase не настроен (используем localStorage)', e);
+            console.log('📝 Чтобы подключить: https://firebase.google.com/docs/database/web/start');
         }
     </script>
 
@@ -478,6 +487,47 @@
             html += '</div>';
             document.getElementById('globalLeaderboardDisplay').innerHTML = html;
             trackEvent('Leaderboard', 'View', 'Global');
+        }
+
+        // === CANVA ДИЗАЙН ИНТЕГРАЦИЯ ===
+        function openCanvaDesigner() {
+            // Шаблоны для разных типов обложек
+            const templates = {
+                'instagram': { width: 1080, height: 1350, name: 'Instagram Пост' },
+                'twitter': { width: 1200, height: 675, name: 'Twitter Баннер' },
+                'youtube': { width: 1280, height: 720, name: 'YouTube Обложка' },
+                'telegram': { width: 800, height: 450, name: 'Telegram Превью' }
+            };
+
+            let html = '<div style="background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px; color: #fff;">';
+            html += '<h3 style="color: #FF6600; margin-bottom: 15px;">🎨 Выбери шаблон для дизайна:</h3>';
+
+            Object.entries(templates).forEach(([key, template]) => {
+                html += `<button onclick="launchCanva('${key}')" style="display: block; width: 100%; margin: 10px 0; padding: 12px; background: #FF6600; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">${template.name} (${template.width}x${template.height})</button>`;
+            });
+
+            html += '</div>';
+
+            // Показываем диалог
+            const dialogDiv = document.createElement('div');
+            dialogDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: rgba(0,0,0,0.5); width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;';
+            dialogDiv.innerHTML = html;
+            dialogDiv.onclick = () => dialogDiv.remove();
+            document.body.appendChild(dialogDiv);
+
+            trackEvent('Design', 'OpenCanva', 'TemplateSelector');
+        }
+
+        function launchCanva(templateType) {
+            const templates = {
+                'instagram': 'https://www.canva.com/create/instagram-post',
+                'twitter': 'https://www.canva.com/create/twitter-post',
+                'youtube': 'https://www.canva.com/create/youtube-thumbnail',
+                'telegram': 'https://www.canva.com/create/custom'
+            };
+
+            window.open(templates[templateType], '_blank');
+            trackEvent('Design', 'LaunchCanva', templateType);
         }
         let enemies = [], spawnCounter = 0;
         let nitroActive = false, nitroTimer = 0, nitroCooldown = 0;

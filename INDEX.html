@@ -656,38 +656,51 @@
             renderer.shadowMap.type = THREE.PCFShadowShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
-            // НЕОНОВОЕ НОЧНОЕ ОСВЕЩЕНИЕ
-            // Оранжевое свечение на горизонте (городской закат)
-            const sunsetLight = new THREE.DirectionalLight(0xFF6600, 0.8);
-            sunsetLight.position.set(0, 100, -500);
-            sunsetLight.castShadow = false;
-            scene.add(sunsetLight);
+            // === РЕАЛИСТИЧНОЕ 3D ОСВЕЩЕНИЕ ===
 
-            // Синий неоновый свет сверху
-            const neonTopLight = new THREE.DirectionalLight(0x00FFFF, 0.6);
-            neonTopLight.position.set(0, 200, 200);
-            scene.add(neonTopLight);
+            // 1. ОСНОВНОЙ ИСТОЧНИК СВЕТА (СОЛНЦЕ/ЛУНА) - для объемности
+            const mainLight = new THREE.DirectionalLight(0xFFFFFF, 1.8);
+            mainLight.position.set(300, 400, -600);
+            mainLight.castShadow = true;
+            mainLight.shadow.mapSize.width = 4096;
+            mainLight.shadow.mapSize.height = 4096;
+            mainLight.shadow.camera.left = -500;
+            mainLight.shadow.camera.right = 500;
+            mainLight.shadow.camera.top = 500;
+            mainLight.shadow.camera.bottom = -500;
+            mainLight.shadow.camera.far = 5000;
+            scene.add(mainLight);
 
-            // Розовый неоновый свет
-            const neonPinkLight = new THREE.PointLight(0xFF00FF, 2);
-            neonPinkLight.position.set(100, 150, 0);
-            scene.add(neonPinkLight);
-
-            // Фиолетовый неоновый свет
-            const neonPurpleLight = new THREE.PointLight(0x9900FF, 2);
-            neonPurpleLight.position.set(-100, 150, 0);
-            scene.add(neonPurpleLight);
-
-            // Амбиентный свет для видимости зданий
-            const ambientLight = new THREE.AmbientLight(0x1a3a6e, 1.2); // Ярче для видимости
-            scene.add(ambientLight);
-
-            // === МОЩНЫЙ БЕЛЫЙ СВЕТ НА МАШИНУ (ДЖОБС: видимость) ===
-            carLight = new THREE.SpotLight(0xFFFFFF, 2);
+            // 2. БЕЛЫЙ СВЕТ НА МАШИНУ (фары) - видимость игрока
+            carLight = new THREE.SpotLight(0xFFFFFF, 2.5);
+            carLight.angle = Math.PI / 3;
             carLight.castShadow = true;
             carLight.shadow.mapSize.width = 2048;
             carLight.shadow.mapSize.height = 2048;
             scene.add(carLight);
+
+            // 3. ОРАНЖЕВЫЙ ЗАКАТ НА ГОРИЗОНТЕ (мягкий, для атмосфера)
+            const sunsetLight = new THREE.DirectionalLight(0xFF8844, 0.5);
+            sunsetLight.position.set(200, 150, -400);
+            scene.add(sunsetLight);
+
+            // 4. СИНИЙ НОЧНОЙ СВЕТ (небо)
+            const nightLight = new THREE.DirectionalLight(0x2266FF, 0.4);
+            nightLight.position.set(-200, 150, 200);
+            scene.add(nightLight);
+
+            // 5. СЛАБЫЕ НЕОНЫ (дополнительные, не основные)
+            const neonPinkLight = new THREE.PointLight(0xFF00FF, 0.6);
+            neonPinkLight.position.set(150, 120, -100);
+            scene.add(neonPinkLight);
+
+            const neonPurpleLight = new THREE.PointLight(0x9900FF, 0.6);
+            neonPurpleLight.position.set(-150, 120, -100);
+            scene.add(neonPurpleLight);
+
+            // 6. АМБИЕНТНЫЙ СВЕТ (базовая видимость всего)
+            const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.6);
+            scene.add(ambientLight);
 
             // === ГОРОД (НЕБОСКРЁБЫ) ===
             createBuildings();
@@ -798,12 +811,15 @@
                 const buildingColors = [0x1a1a2e, 0x0f1a3e, 0x1a0a2e, 0x2a1a1e, 0x0a1a2e];
                 const buildingColor = buildingColors[colorIndex % buildingColors.length];
 
-                // Материал здания с разными цветами
+                // Материал здания с разными цветами (PBR реалистичный)
                 const buildingMat = new THREE.MeshStandardMaterial({
                     color: buildingColor,
-                    roughness: 0.7,
-                    metalness: 0.3,
-                    flatShading: false
+                    roughness: 0.5,      // Блестящие окна + матовая поверхность
+                    metalness: 0.15,     // Бетон/кирпич не металл
+                    flatShading: false,
+                    side: THREE.FrontSide,
+                    castShadow: true,
+                    receiveShadow: true
                 });
 
                 // Основной корпус здания
@@ -854,14 +870,16 @@
                     }
                 }
 
-                // Окна (неоновые огни) - расширенная сетка
+                // Окна (стекло с отражением + внутренний свет)
                 const windowSize = width / 4;
                 const windowsMat = new THREE.MeshStandardMaterial({
-                    color: 0xFFDD00,
-                    emissive: 0xFFDD00,
-                    emissiveIntensity: 1.5,
-                    metalness: 0.6,
-                    roughness: 0.2
+                    color: 0xFFDD00,           // Жёлтый свет внутри
+                    emissive: 0xFFDD00,        // Излучение (свет горит)
+                    emissiveIntensity: 2,      // Ярче свечение
+                    metalness: 0.95,           // Стекло отражает
+                    roughness: 0.05,           // Чистое стекло
+                    envMapIntensity: 1.5,      // Отражение окружения
+                    side: THREE.FrontSide
                 });
 
                 // Больше окон в разных слоях
@@ -1572,9 +1590,13 @@
             asphaltTexture.wrapT = THREE.RepeatWrapping;
             const asphaltMat = new THREE.MeshStandardMaterial({
                 map: asphaltTexture,
-                roughness: 0.85,
-                metalness: 0.1,
-                flatShading: false
+                roughness: 0.4,       // Мокрый асфальт (менее шершавый)
+                metalness: 0.05,      // Немного отражения
+                envMapIntensity: 0.8, // Отражение окружения
+                flatShading: false,
+                side: THREE.FrontSide,
+                castShadow: true,
+                receiveShadow: true
             });
             const roadMesh = new THREE.Mesh(asphaltGeom, asphaltMat);
             roadMesh.rotation.x = -Math.PI / 2;

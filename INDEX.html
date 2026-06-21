@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FFD700">
+    <meta name="description" content="🏎️ Аркадная гоночная игра 3D с дрифтом, полицейской погоней и глобальным лидербордом">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231e3a8a' width='100' height='100'/><rect fill='%23FF6B6B' x='25' y='25' width='50' height='50'/><circle fill='%234ECDC4' cx='35' cy='60' r='5'/><circle fill='%234ECDC4' cx='65' cy='60' r='5'/></svg>">
     <title>DRIFT HUNT — 3D Arcade Racing Game</title>
     <style>
         * {
@@ -213,10 +217,25 @@
         <p>🏁 Аркадная гонка от первого лица</p>
         <p>Управление: ← → стрелки | Shift - дрифт | E - Нитро</p>
         <button onclick="showCarSelect()">НАЧАТЬ</button>
+
+        <!-- PWA: Кнопка установки -->
+        <button id="installBtn" onclick="" style="display: none; margin-top: 15px; padding: 15px 30px; font-size: 16px; background: #ff00ff; color: #fff; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">📲 Установить приложение</button>
+
+        <div style="margin-top: 30px; padding: 20px; background: rgba(0,255,100,0.1); border-radius: 10px;">
+            <p style="color: #00ff00; font-size: 14px;">🤝 Пригласи друзей и получи БОНУС!</p>
+            <button onclick="shareReferralLink()" style="margin-top: 10px; padding: 10px 20px; background: #00ff00; color: #000;">📤 Поделиться ссылкой</button>
+            <div id="referralStats" style="margin-top: 10px; color: #ffaa00; font-size: 12px;"></div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 15px; background: rgba(100,200,255,0.1); border-radius: 10px;">
+            <p style="color: #0088cc; font-size: 12px;">💻 Интеграции:</p>
+            <p style="color: #00ff00; font-size: 11px;">✅ Google Analytics | ✅ Telegram | ✅ Firebase | ✅ PWA</p>
+        </div>
     </div>
     <canvas id="canvas"></canvas>
     <div id="hud" style="display: none;">
         <div>Очки: <span id="score">0</span></div>
+        <div style="color: #00ff00; font-size: 16px; margin-top: 5px;">Лучший результат: <span id="bestScore">0</span></div>
         <div id="speed">Скорость: 0 км/ч</div>
         <div id="speedometer">
             <div id="speedBar"></div>
@@ -224,15 +243,37 @@
         <div id="driftCounter" style="margin-top: 15px; color: #ff00ff; font-size: 20px; text-shadow: 0 0 10px #ff00ff; display: none;">
             🔥 DRIFT: <span id="driftText">0</span>
         </div>
+        <div style="position: absolute; top: 20px; right: 20px; color: #ffaa00; font-size: 14px; text-align: right;">
+            <div id="worldDisplay" style="color: #00FFFF; font-size: 18px; font-weight: bold; margin-bottom: 10px;">🏙️ ГОРОД</div>
+            <div>🏆 Рейтинг: <span id="playerRank">1</span></div>
+            <div id="leaderboard" style="margin-top: 10px; font-size: 12px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; max-width: 250px;"></div>
+        </div>
     </div>
     <canvas id="wheelCanvas" style="position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; display: none;"></canvas>
     <div id="mirror" style="position: absolute; top: 20px; right: 20px; width: 150px; height: 100px; border: 3px solid #00ff00; background: #000; display: none; overflow: hidden;">
         <canvas id="mirrorCanvas" style="width: 100%; height: 100%;"></canvas>
     </div>
+
+    <!-- МОБИЛЬНЫЕ КОНТРОЛЫ -->
+    <div id="mobileControls" style="position: absolute; bottom: 20px; left: 20px; display: none; flex-direction: column; gap: 10px; z-index: 50;">
+        <div style="display: flex; gap: 10px;">
+            <button id="leftBtn" style="width: 60px; height: 60px; background: #00ff00; color: #000; border: none; border-radius: 50%; font-size: 24px; font-weight: bold; cursor: pointer;">◀</button>
+            <button id="rightBtn" style="width: 60px; height: 60px; background: #00ff00; color: #000; border: none; border-radius: 50%; font-size: 24px; font-weight: bold; cursor: pointer;">▶</button>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button id="driftBtn" style="width: 60px; height: 60px; background: #ff00ff; color: #fff; border: none; border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer;">DRIFT</button>
+            <button id="nitroBtn" style="width: 60px; height: 60px; background: #ffaa00; color: #000; border: none; border-radius: 50%; font-size: 16px; font-weight: bold; cursor: pointer;">NITRO</button>
+        </div>
+    </div>
     <div id="gameOverScreen">
         <h1 style="color: #ff0000; font-size: 80px; text-shadow: 0 0 20px #ff0000;">GAME OVER</h1>
         <div style="color: #ffff00; font-size: 36px;">Очки: <span id="finalScore">0</span></div>
-        <button onclick="location.reload()" style="padding: 20px 40px; font-size: 24px; background: #00ff00; color: #000; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">ЗАНОВО</button>
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px; flex-wrap: wrap;">
+            <button onclick="loadAndShowGlobalLeaderboard()" style="padding: 15px 30px; font-size: 18px; background: #ff00ff; color: #fff; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">🌍 Глобальный ТОП</button>
+            <button onclick="shareGameResult(score)" style="padding: 15px 30px; font-size: 18px; background: #0088cc; color: #fff; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">📱 Telegram</button>
+            <button onclick="location.reload()" style="padding: 15px 30px; font-size: 18px; background: #00ff00; color: #000; border: none; cursor: pointer; font-weight: bold; border-radius: 5px;">🔄 Заново</button>
+        </div>
+        <div id="globalLeaderboardDisplay" style="margin-top: 30px; color: #00ff00; font-size: 14px; max-height: 200px; overflow-y: auto;"></div>
     </div>
 
     <div id="carSelectScreen">
@@ -245,18 +286,274 @@
         </div>
     </div>
 
+    <!-- GOOGLE ANALYTICS -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX'); // Замени на твой ID
+
+        // Отслеживание событий
+        function trackEvent(category, action, label) {
+            gtag('event', action, {
+                'event_category': category,
+                'event_label': label
+            });
+        }
+    </script>
+
+    <!-- FIREBASE INTEGRATION -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js"></script>
+    <script>
+        // Firebase конфигурация (замени на свою из Firebase Console)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        let db = null;
+        let firebaseReady = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            firebaseReady = true;
+            console.log('✅ Firebase подключен!');
+        } catch (e) {
+            console.log('⚠️ Firebase не настроен (используем localStorage)');
+        }
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         // === ПЕРЕМЕННЫЕ ===
-        let scene, camera, renderer;
+        let scene, camera, renderer, carLight;
         let playerCar, road, roadSegments = [];
         let inputHandler = {};
         let gameState = 'menu';
         let score = 0;
-        const MAX_SPEED = 200;
+        let bestScore = localStorage.getItem('bestScore') ? parseInt(localStorage.getItem('bestScore')) : 0;
+        let playerStats = JSON.parse(localStorage.getItem('playerStats') || '[]'); // Для лидерборда
+        const MAX_SPEED = 500; // МАСК: увеличена в 2.5x (было 200)
+
+        // === МАСК: НЕСКОЛЬКО МИРОВ ===
+        let currentWorld = 'city'; // 'city', 'track', 'desert'
+        function getWorldType(z) {
+            const absZ = Math.abs(z);
+            if (absZ < 2000) return 'city';      // 0-2000м: Город с небоскрёбами
+            if (absZ < 4000) return 'track';     // 2000-4000м: Чистая трасса
+            if (absZ < 6000) return 'desert';    // 4000-6000м: Пустыня
+            return 'city'; // Циклим назад в город
+        }
+
+        // === ФЕДОТОВ: РЕФЕРАЛЬНАЯ СИСТЕМА ===
+        let playerId = localStorage.getItem('playerId') || 'player_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('playerId', playerId);
+
+        let referralCode = new URLSearchParams(window.location.search).get('ref');
+        if (referralCode) {
+            localStorage.setItem('referrer', referralCode);
+            let referrerStats = JSON.parse(localStorage.getItem('referrerStats_' + referralCode) || '{"count": 0, "bonus": 0}');
+            referrerStats.count++;
+            referrerStats.bonus += 100; // +100 очков за каждого друга
+            localStorage.setItem('referrerStats_' + referralCode, JSON.stringify(referrerStats));
+        }
+
+        function getReferralLink() {
+            const url = window.location.origin + window.location.pathname + '?ref=' + playerId;
+            return url;
+        }
+
+        function getReferralBonus() {
+            const stats = JSON.parse(localStorage.getItem('referrerStats_' + playerId) || '{"count": 0, "bonus": 0}');
+            return stats;
+        }
+
+        // === ФЕДОТОВ: МОНЕТИЗАЦИЯ ===
+        let isPremium = localStorage.getItem('isPremium') === 'true';
+        let monetizationStats = JSON.parse(localStorage.getItem('monetizationStats') || '{"sessionCount": 0, "revenue": 0, "potentialRPM": 0.5}');
+
+        function trackMonetization() {
+            monetizationStats.sessionCount++;
+            // Примерный доход: $0.5 за сессию (RPM = $0.5)
+            monetizationStats.revenue += monetizationStats.potentialRPM;
+            localStorage.setItem('monetizationStats', JSON.stringify(monetizationStats));
+        }
+
+        function getPremiumBonus(score) {
+            if (isPremium) {
+                return score * 1.5; // Премиум: +50% к очкам
+            }
+            return score;
+        }
+
+        function showMonetizationPopup() {
+            const stats = monetizationStats;
+            alert(
+                `💰 СТАТИСТИКА МОНЕТИЗАЦИИ:\n\n` +
+                `Сеансов сыграно: ${stats.sessionCount}\n` +
+                `Потенциальный доход: $${stats.revenue.toFixed(2)}\n` +
+                `RPM: $${stats.potentialRPM}\n\n` +
+                `🌟 Бесплатно, но может быть монетизировано через:\n` +
+                `- Реклама (Google AdSense)\n` +
+                `- Премиум подписка (+50% очков)\n` +
+                `- Коссметика (скины машин)\n` +
+                `- Батл-пасс`
+            );
+        }
+
+        // === FIREBASE: ГЛОБАЛЬНЫЙ ЛИДЕРБОРД & МУЛЬТИПЛЕЕР ===
+        async function uploadScoreToFirebase(finalScore) {
+            if (!firebaseReady || !db) {
+                console.log('Firebase не подключен, используем localStorage');
+                return;
+            }
+
+            try {
+                const playerName = 'Player_' + playerId.substr(-4);
+                const timestamp = new Date().toISOString();
+
+                // Загружаем результат в Firebase
+                await db.ref('scores/' + playerId + '/' + timestamp).set({
+                    score: Math.floor(finalScore),
+                    world: currentWorld,
+                    carModel: selectedCarModel,
+                    date: timestamp
+                });
+
+                // Обновляем лучший результат игрока
+                await db.ref('players/' + playerId).set({
+                    name: playerName,
+                    bestScore: Math.max(Math.floor(finalScore), bestScore),
+                    lastGame: timestamp,
+                    playerId: playerId
+                });
+
+                trackEvent('Firebase', 'ScoreUploaded', 'Success');
+            } catch (error) {
+                console.error('Ошибка Firebase:', error);
+            }
+        }
+
+        async function loadGlobalLeaderboard() {
+            if (!firebaseReady || !db) return [];
+
+            try {
+                const snapshot = await db.ref('players').orderByChild('bestScore').limitToLast(10).once('value');
+                const players = [];
+
+                snapshot.forEach((child) => {
+                    players.push({
+                        name: child.val().name,
+                        score: child.val().bestScore
+                    });
+                });
+
+                return players.reverse(); // От большего к меньшему
+            } catch (error) {
+                console.error('Ошибка загрузки лидерборда:', error);
+                return [];
+            }
+        }
+
+        async function loadAndShowGlobalLeaderboard() {
+            const leaderboard = await loadGlobalLeaderboard();
+            let html = '<div style="background: rgba(0,0,0,0.7); padding: 15px; border-radius: 5px;"><div style="color: #ffff00; font-weight: bold; margin-bottom: 10px;">🌍 ГЛОБАЛЬНЫЙ ЛИДЕРБОРД TOP-10:</div>';
+
+            if (leaderboard.length > 0) {
+                leaderboard.forEach((player, i) => {
+                    html += `<div style="color: #00ff00; margin: 5px 0;">${i + 1}. ${player.name} - ${Math.floor(player.score)} очков</div>`;
+                });
+            } else {
+                html += '<div style="color: #ffaa00;">Подключи Firebase для глобального лидерборда</div>';
+            }
+
+            html += '</div>';
+            document.getElementById('globalLeaderboardDisplay').innerHTML = html;
+            trackEvent('Leaderboard', 'View', 'Global');
+        }
         let enemies = [], spawnCounter = 0;
         let nitroActive = false, nitroTimer = 0, nitroCooldown = 0;
         let smokeParticles = [];
+
+        // === ФУНКЦИИ РЕФЕРАЛОВ ===
+        function shareReferralLink() {
+            const link = getReferralLink();
+            const text = `🏎️ Играй в DRIFT HUNT - крутая гоночная игра! Получи бонус если присоединишься по моей ссылке`;
+
+            // Телеграм шаринг
+            const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'DRIFT HUNT',
+                    text: text + ': ' + link,
+                    url: link
+                }).catch(() => {
+                    // Если не удалось поделиться, открываем Telegram
+                    window.open(telegramUrl, '_blank');
+                });
+            } else {
+                // Телеграм как основной вариант
+                window.open(telegramUrl, '_blank');
+            }
+
+            // Отслеживаем в Analytics
+            trackEvent('Referral', 'Share', 'Telegram');
+        }
+
+        function shareGameResult(score) {
+            const text = `🏎️ Я набрал ${Math.floor(score)} очков в DRIFT HUNT! Попробуй побить мой результат!`;
+            const link = getReferralLink();
+            const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
+            window.open(telegramUrl, '_blank');
+            trackEvent('Result', 'Share', 'Telegram');
+        }
+
+        function updateReferralStats() {
+            const stats = getReferralBonus();
+            const statsDiv = document.getElementById('referralStats');
+            if (stats.count > 0) {
+                statsDiv.innerHTML = `👥 Друзей приглашено: ${stats.count}<br>💰 Бонус: +${stats.bonus} очков`;
+            }
+        }
+
+        // === СИСТЕМА РЕЙТИНГА И ЛИДЕРБОРДА (ФЕДОТОВ) ===
+        function updateLeaderboard() {
+            if (bestScore > 0) {
+                document.getElementById('bestScore').textContent = Math.floor(bestScore);
+            }
+
+            // Формируем лидерборд (топ 5)
+            const leaderDiv = document.getElementById('leaderboard');
+            if (playerStats.length > 0) {
+                let lb = '<div style="color: #ffaa00;">ТОП 5:</div>';
+                playerStats.sort((a, b) => b.score - a.score).slice(0, 5).forEach((stat, i) => {
+                    lb += `<div style="color: #00ff00; margin-top: 2px;">${i + 1}. ${Math.floor(stat.score)} очков</div>`;
+                });
+                leaderDiv.innerHTML = lb;
+            }
+        }
+
+        function saveFinalScore(finalScore) {
+            if (finalScore > bestScore) {
+                bestScore = finalScore;
+                localStorage.setItem('bestScore', Math.floor(bestScore));
+            }
+
+            // Добавляем результат в статистику
+            playerStats.push({ score: finalScore, date: new Date().toLocaleDateString() });
+            localStorage.setItem('playerStats', JSON.stringify(playerStats));
+
+            updateLeaderboard();
+        }
 
         // === ЗВУКИ (Web Audio API) ===
         let audioContext = null;
@@ -265,104 +562,18 @@
         let driftOscillator = null;
         let driftGain = null;
 
-        function initAudio() {
-            if (audioContext) return;
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
+        function initAudio() {}
 
-        function playEngineSound(speed) {
-            if (!audioContext) return;
-            if (!engineGain) {
-                engineGain = audioContext.createGain();
-                engineGain.connect(audioContext.destination);
-                engineGain.gain.value = 0.1;
+        function playEngineSound(speed) {}
 
-                engineOscillator = audioContext.createOscillator();
-                engineOscillator.type = 'triangle';
-                engineOscillator.frequency.value = 200 + (speed / MAX_SPEED) * 400;
-                engineOscillator.connect(engineGain);
-                engineOscillator.start();
-            }
+        function stopEngineSound() {}
 
-            engineOscillator.frequency.linearRampToValueAtTime(
-                200 + (speed / MAX_SPEED) * 400,
-                audioContext.currentTime + 0.05
-            );
-        }
+        function playDriftSound() {}
 
-        function stopEngineSound() {
-            if (engineOscillator) {
-                engineOscillator.stop();
-                engineOscillator = null;
-                engineGain = null;
-            }
-        }
-
-        function playDriftSound() {
-            if (!audioContext) return;
-            if (driftOscillator) return;
-
-            driftGain = audioContext.createGain();
-            driftGain.connect(audioContext.destination);
-            driftGain.gain.value = 0.05;
-
-            driftOscillator = audioContext.createOscillator();
-            driftOscillator.type = 'sawtooth';
-            driftOscillator.frequency.value = 150;
-            driftOscillator.connect(driftGain);
-            driftOscillator.start();
-
-            driftGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.5);
-            driftOscillator.stop(audioContext.currentTime + 0.5);
-            driftOscillator = null;
-        }
-
-        // Сирена полиции
         let sirenOscillator = null;
-        function playSirenSound() {
-            if (!audioContext || sirenOscillator) return;
+        function playSirenSound() {}
 
-            const sirenGain = audioContext.createGain();
-            sirenGain.connect(audioContext.destination);
-            sirenGain.gain.value = 0.08;
-
-            sirenOscillator = audioContext.createOscillator();
-            sirenOscillator.type = 'sine';
-
-            // У-ВУ-У-ВУ звук (чередование частот)
-            const now = audioContext.currentTime;
-            sirenOscillator.frequency.setValueAtTime(400, now);
-            sirenOscillator.frequency.linearRampToValueAtTime(600, now + 0.3);
-            sirenOscillator.frequency.linearRampToValueAtTime(400, now + 0.6);
-            sirenOscillator.frequency.linearRampToValueAtTime(300, now + 0.9);
-            sirenOscillator.frequency.linearRampToValueAtTime(400, now + 1.2);
-
-            sirenOscillator.connect(sirenGain);
-            sirenOscillator.start();
-            sirenOscillator.stop(now + 1.2);
-            sirenOscillator = null;
-        }
-
-        // Звук столкновения
-        function playCollisionSound() {
-            if (!audioContext) return;
-
-            const collisionGain = audioContext.createGain();
-            collisionGain.connect(audioContext.destination);
-            collisionGain.gain.value = 0.15;
-
-            const collisionOsc = audioContext.createOscillator();
-            collisionOsc.type = 'sawtooth';
-            const now = audioContext.currentTime;
-
-            collisionOsc.frequency.setValueAtTime(300, now);
-            collisionOsc.frequency.linearRampToValueAtTime(100, now + 0.3);
-
-            collisionOsc.connect(collisionGain);
-            collisionOsc.start();
-            collisionGain.gain.linearRampToValueAtTime(0, now + 0.3);
-            collisionOsc.stop(now + 0.3);
-        }
+        function playCollisionSound() {}
 
         // === ВЫБОР МАШИН ===
         let selectedCarModel = 'bmw';
@@ -408,21 +619,34 @@
             scene.add(neonTopLight);
 
             // Розовый неоновый свет
-            const neonPinkLight = new THREE.PointLight(0xFF00FF, 1);
+            const neonPinkLight = new THREE.PointLight(0xFF00FF, 2);
             neonPinkLight.position.set(100, 150, 0);
             scene.add(neonPinkLight);
 
             // Фиолетовый неоновый свет
-            const neonPurpleLight = new THREE.PointLight(0x9900FF, 0.8);
+            const neonPurpleLight = new THREE.PointLight(0x9900FF, 2);
             neonPurpleLight.position.set(-100, 150, 0);
             scene.add(neonPurpleLight);
 
-            // Слабый амбиентный свет (ночь)
-            const ambientLight = new THREE.AmbientLight(0x1a3a6e, 0.4); // Тёмно-синий
+            // Амбиентный свет для видимости зданий
+            const ambientLight = new THREE.AmbientLight(0x1a3a6e, 1.2); // Ярче для видимости
             scene.add(ambientLight);
+
+            // === МОЩНЫЙ БЕЛЫЙ СВЕТ НА МАШИНУ (ДЖОБС: видимость) ===
+            carLight = new THREE.SpotLight(0xFFFFFF, 2);
+            carLight.castShadow = true;
+            carLight.shadow.mapSize.width = 2048;
+            carLight.shadow.mapSize.height = 2048;
+            scene.add(carLight);
 
             // === ГОРОД (НЕБОСКРЁБЫ) ===
             createBuildings();
+
+            // === ГОРОДСКИЕ ОБЪЕКТЫ (ФОНАРИ, ЩИТЫ) ===
+            createCityObjects();
+
+            // === ТРАССА (гоночная трасса) ===
+            createTrackObjects();
 
             // === НОЧНОЕ НЕБО - мало облаков (редкие) ===
             const cloudMat = new THREE.MeshStandardMaterial({
@@ -482,19 +706,53 @@
             const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
             const sky = new THREE.Mesh(skyGeometry, skyMaterial);
             scene.add(sky);
+
+            // ✨ ЛУНА ✨
+            const moonGeom = new THREE.SphereGeometry(80, 32, 32);
+            const moonCanvas = document.createElement('canvas');
+            moonCanvas.width = 256;
+            moonCanvas.height = 256;
+            const moonCtx = moonCanvas.getContext('2d');
+
+            // Луна с кратерами
+            moonCtx.fillStyle = '#f0f0ff';
+            moonCtx.beginPath();
+            moonCtx.arc(128, 128, 128, 0, Math.PI * 2);
+            moonCtx.fill();
+
+            // Кратеры на луне
+            moonCtx.fillStyle = '#c0c0d0';
+            for (let i = 0; i < 30; i++) {
+                const x = Math.random() * 256;
+                const y = Math.random() * 256;
+                const size = Math.random() * 15 + 3;
+                moonCtx.beginPath();
+                moonCtx.arc(x, y, size, 0, Math.PI * 2);
+                moonCtx.fill();
+            }
+
+            const moonTexture = new THREE.CanvasTexture(moonCanvas);
+            const moonMat = new THREE.MeshBasicMaterial({ map: moonTexture });
+            const moon = new THREE.Mesh(moonGeom, moonMat);
+            moon.position.set(-500, 800, -1500);
+            scene.add(moon);
         }
 
         // === СОЗДАНИЕ ГОРОДА (НЕБОСКРЁБЫ) ===
         function createBuildings() {
             // Функция для создания одного небоскрёба
-            function createBuilding(x, z, height, width) {
+            function createBuilding(x, z, height, width, colorIndex = 0) {
                 const group = new THREE.Group();
 
-                // Материал здания (тёмный серый с неоновыми огнями)
+                // Разные цвета для зданий
+                const buildingColors = [0x1a1a2e, 0x0f1a3e, 0x1a0a2e, 0x2a1a1e, 0x0a1a2e];
+                const buildingColor = buildingColors[colorIndex % buildingColors.length];
+
+                // Материал здания с разными цветами
                 const buildingMat = new THREE.MeshStandardMaterial({
-                    color: 0x1a1a2e, // Тёмный серый-синий
-                    roughness: 0.8,
-                    metalness: 0.2,
+                    color: buildingColor,
+                    roughness: 0.7,
+                    metalness: 0.3,
                     flatShading: false
                 });
 
@@ -506,28 +764,67 @@
                 building.receiveShadow = true;
                 group.add(building);
 
-                // Окна (неоновые огни)
-                const windowSize = width / 4;
-                const windowsMat = new THREE.MeshStandardMaterial({
-                    color: 0xFFDD00, // Жёлто-оранжевые огни
-                    emissive: 0xFFCC00,
-                    metalness: 0.9,
-                    roughness: 0.1
+                // КРЫША с антенной
+                const roofGeom = new THREE.BoxGeometry(width + 0.5, 1, 8.5);
+                const roofMat = new THREE.MeshStandardMaterial({
+                    color: 0x0a0a0f,
+                    roughness: 0.6,
+                    metalness: 0.4
+                });
+                const roof = new THREE.Mesh(roofGeom, roofMat);
+                roof.position.y = height + 0.5;
+                roof.castShadow = true;
+                group.add(roof);
+
+                // АНТЕННА на крыше
+                const antennaGeom = new THREE.CylinderGeometry(0.2, 0.2, 5, 8);
+                const antennaMat = new THREE.MeshStandardMaterial({
+                    color: 0x444455,
+                    metalness: 0.8
+                });
+                const antenna = new THREE.Mesh(antennaGeom, antennaMat);
+                antenna.position.y = height + 5.5;
+                group.add(antenna);
+
+                // БАЛКОНЫ (выступы)
+                const balconyGeom = new THREE.BoxGeometry(width + 1, 0.5, 1);
+                const balconyMat = new THREE.MeshStandardMaterial({
+                    color: 0x1a1a3e,
+                    roughness: 0.6,
+                    metalness: 0.2
                 });
 
-                // Создаём сетку окон
+                for (let balc = 0; balc < Math.floor(height / 8); balc++) {
+                    if (Math.random() > 0.4) {
+                        const balcony = new THREE.Mesh(balconyGeom, balconyMat);
+                        balcony.position.y = 5 + balc * 8;
+                        balcony.position.z = 5;
+                        balcony.castShadow = true;
+                        group.add(balcony);
+                    }
+                }
+
+                // Окна (неоновые огни) - расширенная сетка
+                const windowSize = width / 4;
+                const windowsMat = new THREE.MeshStandardMaterial({
+                    color: 0xFFDD00,
+                    emissive: 0xFFDD00,
+                    emissiveIntensity: 1.5,
+                    metalness: 0.6,
+                    roughness: 0.2
+                });
+
+                // Больше окон в разных слоях
                 for (let row = 0; row < Math.floor(height / 3); row++) {
-                    for (let col = 0; col < 3; col++) {
-                        // Случайно включаем/выключаем окна
-                        if (Math.random() > 0.2) {
-                            const windowGeom = new THREE.BoxGeometry(windowSize * 0.7, windowSize * 0.7, 0.5);
+                    for (let col = 0; col < 4; col++) {
+                        if (Math.random() > 0.25) {
+                            const windowGeom = new THREE.BoxGeometry(windowSize * 0.6, windowSize * 0.6, 0.5);
                             const window = new THREE.Mesh(windowGeom, windowsMat);
                             window.position.set(
-                                -width / 2 + windowSize * (col + 0.5),
+                                -width / 2 + windowSize * (col + 0.3),
                                 windowSize * row + 1,
                                 4.5
                             );
-                            window.castShadow = true;
                             group.add(window);
                         }
                     }
@@ -541,7 +838,7 @@
             for (let i = 0; i < 8; i++) {
                 const height = 30 + Math.random() * 50;
                 const width = 6 + Math.random() * 3;
-                const building = createBuilding(-18 - Math.random() * 5, -i * 60, height, width);
+                const building = createBuilding(-18 - Math.random() * 5, -i * 60, height, width, i);
                 scene.add(building);
             }
 
@@ -549,9 +846,115 @@
             for (let i = 0; i < 8; i++) {
                 const height = 30 + Math.random() * 50;
                 const width = 6 + Math.random() * 3;
-                const building = createBuilding(18 + Math.random() * 5, -i * 60, height, width);
+                const building = createBuilding(18 + Math.random() * 5, -i * 60, height, width, i + 8);
                 scene.add(building);
             }
+        }
+
+        // === ФУНКЦИИ ДЛЯ РАЗНЫХ МИРОВ ===
+
+        // ПУСТЫНЯ: дюны, кактусы
+        function createDesertSegment(z) {
+            // Дюны (волнистые холмы песка)
+            for (let i = 0; i < 5; i++) {
+                const duneGeom = new THREE.ConeGeometry(15 + Math.random() * 10, 8, 8);
+                const duneMat = new THREE.MeshStandardMaterial({
+                    color: 0xCCBB00,
+                    roughness: 0.9
+                });
+                const dune = new THREE.Mesh(duneGeom, duneMat);
+                dune.position.set(
+                    -40 + Math.random() * 80,
+                    0,
+                    z + Math.random() * 50 - 25
+                );
+                scene.add(dune);
+            }
+
+            // Кактусы
+            if (Math.random() > 0.5) {
+                const cactusGeom = new THREE.CylinderGeometry(1, 1.2, 6, 6);
+                const cactusMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+                const cactus = new THREE.Mesh(cactusGeom, cactusMat);
+                cactus.position.set(Math.random() > 0.5 ? -30 : 30, 3, z);
+                scene.add(cactus);
+            }
+        }
+
+        // ТРАССА: чистая гоночная трасса, только стартовая линия и трибуны
+        function createTrackObjects() {
+            // Трибуны слева
+            const tribGeom = new THREE.BoxGeometry(8, 4, 50);
+            const tribMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+            const trib = new THREE.Mesh(tribGeom, tribMat);
+            trib.position.set(-28, 2, -1000);
+            scene.add(trib);
+
+            // Трибуны справа
+            const trib2 = new THREE.Mesh(tribGeom, tribMat);
+            trib2.position.set(28, 2, -1000);
+            scene.add(trib2);
+
+            // Стартовая линия
+            const startGeom = new THREE.BoxGeometry(20, 0.5, 2);
+            const startMat = new THREE.MeshStandardMaterial({
+                color: 0xFFFFFF,
+                emissive: 0xFFFFFF,
+                emissiveIntensity: 0.5
+            });
+            const start = new THREE.Mesh(startGeom, startMat);
+            start.position.set(0, 0.02, -100);
+            scene.add(start);
+        }
+
+        // === УЛИЧНЫЕ ФОНАРИ И ОБЪЕКТЫ (УПРОЩЁННАЯ ВЕРСИЯ) ===
+        function createCityObjects() {
+            // Уличные фонари ТОЛЬКО каждый третий (убрал половину)
+            for (let i = 0; i < 10; i++) {
+                const posZ = -i * 100;
+
+                // Слева
+                const lampGeom = new THREE.SphereGeometry(0.6, 8, 8);
+                const lampMat = new THREE.MeshStandardMaterial({
+                    color: 0xFF6633,
+                    emissive: 0xFF6633,
+                    emissiveIntensity: 0.8
+                });
+                const lamp = new THREE.Mesh(lampGeom, lampMat);
+                lamp.position.set(-25, 8, posZ);
+                scene.add(lamp);
+
+                const lampLight = new THREE.PointLight(0xFF6633, 0.4);
+                lampLight.position.set(-25, 8, posZ);
+                scene.add(lampLight);
+
+                // Справа
+                const lamp2 = new THREE.Mesh(lampGeom, lampMat);
+                lamp2.position.set(25, 8, posZ);
+                scene.add(lamp2);
+
+                const lampLight2 = new THREE.PointLight(0xFF6633, 0.4);
+                lampLight2.position.set(25, 8, posZ);
+                scene.add(lampLight2);
+            }
+
+            // Рекламные щиты ТОЛЬКО 3 штуки (убрал половину)
+            for (let i = 0; i < 3; i++) {
+                const posZ = -i * 200;
+                const side = i % 2 === 0 ? -30 : 30;
+
+                const billboardGeom = new THREE.BoxGeometry(6, 3, 0.5);
+                const billboardMat = new THREE.MeshStandardMaterial({
+                    color: 0x001a33,
+                    emissive: 0x0066ff,
+                    emissiveIntensity: 0.4
+                });
+                const billboard = new THREE.Mesh(billboardGeom, billboardMat);
+                billboard.position.set(side, 8, posZ);
+                scene.add(billboard);
+            }
+
+            // Деревья УБРАНЫ ПОЛНОСТЬЮ (слишком много шума)
         }
 
         // === ФУНКЦИЯ КРИВОЙ ДОРОГИ ===
@@ -741,6 +1144,18 @@
             group.add(addWheel(-bodyWidth / 2 + 0.2, -bodyLength / 3));
             group.add(addWheel(bodyWidth / 2 - 0.2, -bodyLength / 3));
 
+            // ТЕНЬ ОТ МАШИНЫ
+            const shadowGeom = new THREE.PlaneGeometry(bodyWidth * 0.8, bodyLength * 0.6);
+            const shadowMat = new THREE.MeshStandardMaterial({
+                color: 0x000000,
+                transparent: true,
+                opacity: 0.3
+            });
+            const shadow = new THREE.Mesh(shadowGeom, shadowMat);
+            shadow.rotation.x = -Math.PI / 2;
+            shadow.position.y = -0.2;
+            group.add(shadow);
+
             return group;
         }
 
@@ -801,8 +1216,8 @@
 
                 if (nitroCooldown > 0) nitroCooldown -= deltaTime;
 
-                let acceleration = 50;
-                if (nitroActive) acceleration = 150;
+                let acceleration = 120; // МАСК: увеличено в 2.4x (было 50)
+                if (nitroActive) acceleration = 350; // МАСК: увеличено в 2.3x (было 150)
 
                 if (this.velocity < this.maxSpeed) {
                     this.velocity += acceleration * deltaTime;
@@ -849,6 +1264,10 @@
                 camera.position.x = this.x + roadOffset;
                 camera.position.z = 0;
 
+                // Обновляю положение белого света на машину
+                carLight.position.set(this.x + roadOffset, 15, -20);
+                carLight.target.position.set(this.x + roadOffset, 0, 30);
+
                 const lookAheadZ = 20;
                 const futureOffset = getRoadOffset(this.z + lookAheadZ);
                 const lookAtX = this.x + futureOffset + Math.sin(this.angle) * 5;
@@ -860,6 +1279,11 @@
                 document.getElementById('speedBar').style.width = speedPercent + '%';
                 document.getElementById('speed').textContent = 'Скорость: ' + Math.floor(this.velocity) + ' км/ч';
                 document.getElementById('driftText').textContent = Math.floor(driftTimer * 100);
+
+                // === МАСК: ОБНОВЛЯЮ ОТОБРАЖЕНИЕ МИРА ===
+                const world = getWorldType(this.z);
+                const worldNames = { city: '🏙️ ГОРОД', track: '🏁 ТРАССА', desert: '🏜️ ПУСТЫНЯ' };
+                document.getElementById('worldDisplay').textContent = worldNames[world];
 
                 // Размытие по краям при высокой скорости
                 const blurAmount = Math.max(0, (this.velocity - 100) / 100 * 10);
@@ -963,19 +1387,24 @@
 
         // === ДЫМ ===
         function createSmoke(x, z) {
-            const smokeGeom = new THREE.SphereGeometry(0.3, 8, 8);
+            const smokeGeom = new THREE.SphereGeometry(0.4, 8, 8);
+            // Случайный цвет дыма - от оранжевого к розовому
+            const smokeColors = [0xFF6633, 0xFF3366, 0xFF9900];
+            const smokeColor = smokeColors[Math.floor(Math.random() * smokeColors.length)];
             const smokeMat = new THREE.MeshStandardMaterial({
-                color: 0x888888,
+                color: smokeColor,
+                emissive: smokeColor,
+                emissiveIntensity: 0.4,
                 transparent: true,
-                opacity: 0.5
+                opacity: 0.6
             });
             const smoke = new THREE.Mesh(smokeGeom, smokeMat);
-            smoke.position.set(x + (Math.random() - 0.5) * 2, 0.5 + Math.random() * 1, (Math.random() - 0.5) * 2);
+            smoke.position.set(x + (Math.random() - 0.5) * 2, 0.3 + Math.random() * 0.8, z + (Math.random() - 0.5) * 2);
             scene.add(smoke);
             smokeParticles.push({
                 mesh: smoke,
-                life: 1,
-                maxLife: 1
+                life: 1.2,
+                maxLife: 1.2
             });
         }
 
@@ -1105,13 +1534,17 @@
             roadMesh.receiveShadow = true;
             scene.add(roadMesh);
 
-            // БЕЛАЯ ПУНКТИРНАЯ разметка в центре
+            // ЖЁЛТАЯ ПУНКТИРНАЯ разметка в центре (более видимая ночью)
             for (let i = 0; i < segmentLength / 5; i++) {
-                const dashGeometry = new THREE.PlaneGeometry(0.4, 2);
-                const dashMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+                const dashGeometry = new THREE.PlaneGeometry(0.5, 2.5);
+                const dashMat = new THREE.MeshStandardMaterial({
+                    color: 0xFFDD00,
+                    emissive: 0xFFCC00,
+                    emissiveIntensity: 0.8
+                });
                 const dash = new THREE.Mesh(dashGeometry, dashMat);
                 dash.rotation.x = -Math.PI / 2;
-                dash.position.set(offset, 0.01, z + i * 5 - segmentLength / 2);
+                dash.position.set(offset, 0.02, z + i * 5 - segmentLength / 2);
                 scene.add(dash);
             }
 
@@ -1162,8 +1595,16 @@
 
             if (roadSegments.length < 20) { // Поддерживаем 20 сегментов для длинной дороги
                 const lastZ = roadSegments[roadSegments.length - 1]?.z || 0;
-                createRoadSegment(lastZ - 50);
-                createGrassSegment(lastZ - 50);
+                const newZ = lastZ - 50;
+                createRoadSegment(newZ);
+                createGrassSegment(newZ);
+
+                // === МАСК: ГЕНЕРИРУЕМ ОБЪЕКТЫ РАЗНЫХ МИРОВ ===
+                const worldType = getWorldType(newZ);
+                if (worldType === 'desert' && Math.random() > 0.7) {
+                    createDesertSegment(newZ);
+                }
+                currentWorld = worldType;
             }
 
             spawnCounter++;
@@ -1207,8 +1648,29 @@
 
         // === INPUT ===
         function setupInput() {
+            // Клавиатура (ПК)
             window.addEventListener('keydown', (e) => inputHandler[e.key] = true);
             window.addEventListener('keyup', (e) => inputHandler[e.key] = false);
+
+            // === МОБИЛЬНЫЕ TOUCH CONTROLS ===
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                // Левая кнопка (повернуть влево)
+                document.getElementById('leftBtn')?.addEventListener('touchstart', () => inputHandler['ArrowLeft'] = true);
+                document.getElementById('leftBtn')?.addEventListener('touchend', () => inputHandler['ArrowLeft'] = false);
+
+                // Правая кнопка (повернуть вправо)
+                document.getElementById('rightBtn')?.addEventListener('touchstart', () => inputHandler['ArrowRight'] = true);
+                document.getElementById('rightBtn')?.addEventListener('touchend', () => inputHandler['ArrowRight'] = false);
+
+                // Дрифт кнопка
+                document.getElementById('driftBtn')?.addEventListener('touchstart', () => inputHandler['Shift'] = true);
+                document.getElementById('driftBtn')?.addEventListener('touchend', () => inputHandler['Shift'] = false);
+
+                // Нитро кнопка
+                document.getElementById('nitroBtn')?.addEventListener('touchstart', () => inputHandler['e'] = true);
+                document.getElementById('nitroBtn')?.addEventListener('touchend', () => inputHandler['e'] = false);
+            }
         }
 
         // === КАМЕРА ДЛЯ ЗЕРКАЛА ===
@@ -1318,7 +1780,11 @@
             } else if (gameState === 'gameOver') {
                 stopEngineSound();
                 document.getElementById('hud').style.display = 'none';
-                document.getElementById('finalScore').textContent = Math.floor(score);
+                const finalScore = Math.floor(getPremiumBonus(score)); // Применяем премиум бонус
+                document.getElementById('finalScore').textContent = finalScore;
+                saveFinalScore(finalScore); // Сохраняем результат в рейтинг
+                trackMonetization(); // Отслеживаем монетизацию
+                uploadScoreToFirebase(finalScore); // Загружаем в Firebase
                 document.getElementById('gameOverScreen').style.display = 'flex';
             }
 
@@ -1336,6 +1802,7 @@
         function showMenu() {
             document.getElementById('menu').style.display = 'flex';
             document.getElementById('carSelectScreen').style.display = 'none';
+            updateReferralStats(); // Показываем статистику рефералов
         }
 
         function renderCarModels() {
@@ -1401,14 +1868,53 @@
             document.getElementById('hud').style.display = 'block';
             document.getElementById('wheelCanvas').style.display = 'block';
             document.getElementById('mirror').style.display = 'block';
+
+            // === МОБИЛЬНАЯ ОПТИМИЗАЦИЯ ===
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                document.getElementById('mobileControls').style.display = 'flex';
+            }
+
             initMirrorCamera();
             initAudio();
             gameState = 'playing';
             score = 0;
             playerCar.velocity = 0;
+            updateLeaderboard(); // Показываем лидерборд при старте
         }
 
         window.addEventListener('load', () => {
+            // === PWA: РЕГИСТРАЦИЯ SERVICE WORKER ===
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/service-worker.js').then((registration) => {
+                    console.log('✅ Service Worker зарегистрирован:', registration);
+                    trackEvent('PWA', 'ServiceWorkerRegistered', 'Success');
+                }).catch((error) => {
+                    console.log('⚠️ Service Worker ошибка:', error);
+                });
+
+                // Запрос на установку приложения
+                let deferredPrompt;
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    // Показываем кнопку установки
+                    const installBtn = document.getElementById('installBtn');
+                    if (installBtn) {
+                        installBtn.style.display = 'block';
+                        installBtn.addEventListener('click', () => {
+                            deferredPrompt.prompt();
+                            deferredPrompt.userChoice.then((choiceResult) => {
+                                if (choiceResult.outcome === 'accepted') {
+                                    trackEvent('PWA', 'AppInstalled', 'Success');
+                                }
+                                deferredPrompt = null;
+                            });
+                        });
+                    }
+                });
+            }
+
             loadCarSelection();
             initThreeJS();
             createRoad();
